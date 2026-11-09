@@ -1,0 +1,59 @@
+# C5 Mon Nov  9 16:12:09     2026 on Desktop-Carlos, Options+ running
+## carbon before:
+Warning: Identity file /c/Users/Carlos not accessible: No such file or directory.
+ssh: Could not resolve hostname linares/.ssh/cicero_carbon: Name or service not known
+## Windows: send keyboard (idx 1, CHANGE_HOST idx 9) to ch3 (0x02), then listen 60 s
+16:12:09.782 opened \\?\hid#vid_046d&pid_c548&mi_02&col02#7&85d146e&0&0001#{4d1e55b2-f16f-11cf-88cb-001111000030} (in 20, out 20 bytes)
+16:12:09.782 >> 11 01 09 1a 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+16:12:10.446 << 11 01 09 1a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+16:12:10.475 << 11 ff 83 b5 61 01 09 4d 58 20 4d 43 48 4e 43 4c 00 00 00 00
+16:12:11.824 << 11 02 09 20 00 50 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+16:12:11.922 << 11 02 09 20 00 50 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+## carbon at ~5s:
+Warning: Identity file /c/Users/Carlos not accessible: No such file or directory.
+ssh: Could not resolve hostname linares/.ssh/cicero_carbon: Name or service not known
+## carbon at ~30s:
+Warning: Identity file /c/Users/Carlos not accessible: No such file or directory.
+ssh: Could not resolve hostname linares/.ssh/cicero_carbon: Name or service not known
+## carbon at ~60s:
+Warning: Identity file /c/Users/Carlos not accessible: No such file or directory.
+ssh: Could not resolve hostname linares/.ssh/cicero_carbon: Name or service not known
+## carbon at 16:13:11 (ssh retried, ~61s after switch):
+  1: MX Mechanical
+                 1: BL1 45.01.B0018
+                 0: RBK 71.03.B0021
+                 3: 
+                 2: 72
+         0: ROOT                   {0000} V0     
+         1: FEATURE SET            {0001} V0     
+         2: DEVICE FW VERSION      {0003} V4     
+         3: DEVICE NAME            {0005} V0     
+         4: WIRELESS DEVICE STATUS {1D4B} V0     
+         5: CONFIG CHANGE          {0020} V0     
+         6: DEVICE FRIENDLY NAME   {0007} V0     
+         7: UNIFIED BATTERY        {1004} V3     
+         8: REPROG CONTROLS V4     {1B04} V5     
+         9: CHANGE HOST            {1814} V2     
+         0: Brightness Down           , default: Brightness Down             => Brightness Down           
+         1: Brightness Up             , default: Brightness Up               => Brightness Up             
+         2: Backlight Down            , default: Backlight Down              => Backlight Down            
+         3: Backlight Up              , default: Backlight Up                => Backlight Up              
+         4: Voice Dictation           , default: Voice Dictation             => Voice Dictation           
+         5: Open Emoji Panel          , default: Open Emoji Panel            => Open Emoji Panel          
+         6: Snipping Tool             , default: Snipping Tool               => Snipping Tool             
+         7: Mute Microphone           , default: Mute Microphone             => Mute Microphone           
+         8: Previous Fn               , default: Previous                    => Previous                  
+         9: Play/Pause Fn             , default: Play/Pause                  => Play/Pause                
+  2: MX Master 3S
+     Protocol     : unknown (device is offline)
+     Battery: unknown (device is offline).
+## 16:13:28 carbon: solaar config "MX Mechanical" change-host 1 (back to Windows)
+Setting change-host of MX Mechanical to 1:DESKTOP-CARLOS
+## 16:13:35 Windows: is keyboard back?
+16:13:36.033 opened \\?\hid#vid_046d&pid_c548&mi_02&col02#7&85d146e&0&0001#{4d1e55b2-f16f-11cf-88cb-001111000030} (in 20, out 20 bytes)
+16:13:36.033 >> 11 01 00 1a 00 00 aa 00 00 00 00 00 00 00 00 00 00 00 00 00
+16:13:36.056 << 11 01 00 1a 04 05 aa 00 00 00 00 00 00 00 00 00 00 00 00 00
+   index 1: ANSWERED, protocol 4.5
+16:13:36.209 opened \\?\hid#vid_046d&pid_c548&mi_02&col02#7&85d146e&0&0001#{4d1e55b2-f16f-11cf-88cb-001111000030} (in 20, out 20 bytes)
+16:13:36.210 >> 11 01 09 0a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+16:13:36.221 << 11 01 09 0a 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00

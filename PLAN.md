@@ -159,7 +159,8 @@ Keep the sniffer running through all of these:
 
 ### C4. Can our program share the receiver with Logi Options+? (Windows, blocker)
 1. Download hidapitester (github.com/todbot/hidapitester, a single .exe). Keep
-   Options+ running.
+   Options+ running. (SmartScreen blocks it; `python tools/hidpp-win.py`
+   does the same job: `list`, `ping 1 2 3`, `feature N 0x1814`, `send ...`.)
 2. List the receiver's interfaces:
    `hidapitester --vidpid 046D:C548 --list-detail`. Look for usagePage 0xFF00,
    usage 0x0002, which is the long HID++ reports.
@@ -177,14 +178,46 @@ Keep the sniffer running through all of these:
    (= ch3) to send the device back to this Linux machine.
 - Pass: the ping is answered while Options+ is running.
 - Also note: does Options+ react, change settings, or complain?
-- Result:
+- Result (2026-11-09, DESKTOP-CARLOS, log `hw-logs/c4-2026-11-09-1611.txt`): ✅
+  **pass, the receiver can be shared.**
+  - Windows SmartScreen blocked hidapitester.exe, so the check used
+    `tools/hidpp-win.py` instead. It's a dependency-free Python/ctypes script
+    that opens the interface the way hidapi's Windows backend does
+    (CreateFile with shared read/write, overlapped I/O).
+  - The interface is there: 046d:c548 usagePage 0xFF00 usage 0x0002, 20-byte
+    in/out (`mi_02&col02`). The short one, 0xFF00/0x0001 (7 bytes), is next
+    to it.
+  - Opening it while Options+ was running (logioptionsplus, \_agent,
+    \_appbroker, \_updater) worked every time, with no errors.
+  - Ping: index 1 = MX Mechanical and index 2 = MX Master 3S answered, both
+    HID++ 4.5. Indexes 3–6 gave no answer. The indexes are the **same as on
+    carbon**.
+  - CHANGE_HOST is at feature index 9 (V2) on the keyboard and index 10 (V1)
+    on the mouse. That's also the same as on Linux.
+  - Options+ showed no error or prompt. Its traffic is visible on the same
+    interface (see C5), so reading in parallel works as it does on Linux.
 
 ### C5. Does Options+ undo our switch? (Windows)
 1. With Options+ running, switch the keyboard to ch3 using the C4
    command.
 2. Does it stay on ch3? Do Options+ settings still apply after it comes back to
    ch1?
-- Result:
+- Result (2026-11-09, log `hw-logs/c5-2026-11-09-1612.txt`): ✅ Options+ does
+  **not** undo the switch. ⚠️ Whether its settings reapply is not checked yet.
+  - Sent `11 01 09 1A 02` (keyboard, CHANGE_HOST setCurrentHost ch3). The
+    device acknowledged it (`11 01 09 1a 00`) after 0.66 s.
+  - Straight away, `11 ff 83 b5 61 01 09 "MX MCHNCL"` appeared: a receiver
+    pairing-info register read that we didn't send, so it came from Options+
+    or LogiBolt. That's Options+ noticing the change, but it didn't act on it.
+  - On carbon, solaar showed the keyboard online, with its features read
+    live, about 61 s later. So it stayed on ch3.
+  - It was brought back with `solaar config "MX Mechanical" change-host 1` on
+    carbon. Windows then answered the ping, and getHostInfo read
+    `03 00` (3 hosts, current = ch1).
+  - Still to check by hand: do Options+ key customizations and backlight
+    settings still work on the keyboard after it came back?
+  - Side note: the reply to a CHANGE_HOST write arrives before the device
+    drops. The daemon can treat a missing ack as "not switched".
 
 ### C6. Are the channels numbered the same on both devices? (both)
 1. Press Easy-Switch 1, 2 and 3 on each device and note which computer each one
