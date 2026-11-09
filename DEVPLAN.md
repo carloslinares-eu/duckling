@@ -40,7 +40,7 @@ General rules:
 | # | Task | Effort | Agents | Skills | HW | Depends |
 |---|---|---|---|---|---|---|
 | 1.1 ✅ | `hidpp::Report`: encode and decode short/long reports. Unit tests use lines from `hw-logs/` | medium | 1 | HID++ 2.0 framing, doctest | – | 0.2 |
-| 1.2 | `hidpp::EventParser`: 0x41 connect notices and the CHANGE_HOST event. Tests use every C2/C3/C5 log line | high | 1 | HID++ notifications, Bolt receiver | – | 1.1 |
+| 1.2 ✅ | `hidpp::EventParser`: 0x41 connect notices and the CHANGE_HOST event. Tests use every C2/C3/C5 log line | high | 1 | HID++ notifications, Bolt receiver | – | 1.1 |
 | 1.3 | `io::Receiver`: enumerate 046D:C548 0xFF00/0x0002, open, read with timeout, `request()` with swId 0xD matching, write mutex | high | 2 *(Linux and Windows backends checked in parallel)* | hidapi, hidraw, Windows HID, threading | carbon + Windows | 1.1 |
 | 1.4 | `hidpp::Features`: ping, getFeatureIndex, getHostInfo, setCurrentHost, HOSTS_INFO names, device name | high | 1 | HID++ features 0x0000/0x0005/0x1814/0x1815 | carbon | 1.3 |
 | 1.5 | `duckling status`: receiver, devices, own channel, host-name table | medium | 1 | CLI design | carbon + Windows | 1.4 |

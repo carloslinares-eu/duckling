@@ -34,6 +34,16 @@ inline constexpr std::size_t kShortLength = 7;
 inline constexpr std::size_t kLongLength = 20;
 /** @brief Device index that addresses the receiver itself. */
 inline constexpr std::uint8_t kReceiverIndex = 0xFF;
+/**
+ * @brief Software id duckling puts in every request it sends.
+ *
+ * Replies echo the requester's swId, which tells duckling's replies apart
+ * from Solaar's (2) and Options+'s. swId **0 is reserved for unsolicited
+ * device events**: EventParser recognises a CHANGE_HOST switch announcement
+ * by swId 0 (PLAN.md C2), so a request sent with swId 0 would have its reply
+ * mistaken for a host switch.
+ */
+inline constexpr std::uint8_t kDucklingSwId = 0x0D;
 /** @brief Byte 2 value for a HID++ 1.0 error reply (from the receiver). */
 inline constexpr std::uint8_t kHidpp10ErrorSubId = 0x8F;
 /** @brief Byte 2 value for a HID++ 2.0 error reply (from a device). */

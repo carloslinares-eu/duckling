@@ -460,14 +460,14 @@ State:
 
 Events and actions:
 ```
-on KbdSwitchEvent(from,to):                     # button press, target known
+on HostChange(kbd,from,to):                     # button press, target known
     target_host = name_of(kbd, to)
     if peer_alive(target_host): set_host(mouse, ch_of(mouse, target_host)); suppress(mouse)
     else log("target off, not following")      # C3: never strand both
 
-on DeviceOffline(dev):
+on DeviceConnection(dev, offline):
     if suppressed(dev): return
-    if dev is kbd and a KbdSwitchEvent just arrived: return   # already handled above
+    if dev is kbd and a HostChange just arrived: return   # already handled above
     pending[dev] = now + 1.5 s                  # mouse, or kbd with no event
 
 on Arrived(peer, wpid, ch) from LAN:
@@ -476,7 +476,7 @@ on Arrived(peer, wpid, ch) from LAN:
         if follower.online here: set_host(follower, ch_of(follower, peer)); suppress(follower)
         clear pending
 
-on DeviceOnline(dev):
+on DeviceConnection(dev, online):
     broadcast ARRIVED(self, dev.wpid, dev.own_ch); refresh own_ch cache
     clear pending[dev]                          # came back (power cycle), nothing to do
 

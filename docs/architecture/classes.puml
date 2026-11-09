@@ -38,9 +38,8 @@ package "core" {
     +popUntil(TimePoint) : optional<Event>
   }
   class "Event" as Event <<variant>> {
-    DeviceOnline
-    DeviceOffline
-    KbdSwitchEvent(from, to)
+    hidpp::DeviceConnection
+    hidpp::HostChange
     PeerHello
     PeerArrived
   }
@@ -133,9 +132,40 @@ package "hidpp" {
     +getHostNames(...) : array<string,3>
     +getDeviceName(...) : string
   }
-  class EventParser <<utility>> {
-    +parse(const Report&) : optional<Event>
+  class EventParser {
+    -slots_ : array<Slot{wpid, changeHost}, 7>
+    +setChangeHostFeature(deviceIndex, wpid, featureIndex)
+    +forgetDevice(deviceIndex)
+    +parse(const Report&) : optional<hidpp::Event>
   }
+  note right of EventParser
+    Registration is dropped when the slot reports
+    another wpid or an unpair notice (0x40).
+    swId 0 = device event; requests use kDucklingSwId (0xD).
+  end note
+  class "hidpp::Event" as HidppEvent <<variant>> {
+    DeviceConnection | HostChange
+  }
+  class EventsFn <<utility>> {
+    +parseDeviceConnection(const Report&) : optional<DeviceConnection>
+    +toDeviceKind(raw) : DeviceKind
+  }
+  class DeviceConnection <<event>> {
+    deviceIndex : uint8_t
+    online : bool
+    rawKind : uint8_t
+    wpid : uint16_t
+    +kind() : DeviceKind
+  }
+  class HostChange <<event>> {
+    deviceIndex : uint8_t
+    fromHost : uint8_t  (< 3)
+    toHost : uint8_t  (< 3)
+  }
+  note bottom of HostChange
+    11 i F 00 <from> <to>: sent ~37 ms before the
+    link drops; button presses only, CHANGE_HOST V2
+  end note
 }
 
 package "net" {
@@ -193,7 +223,12 @@ Report --> ReportId
 Features ..> Receiver
 Features ..> Report
 EventParser ..> Report
-EventParser ..> Event
+EventParser ..> HidppEvent
+EventParser ..> EventsFn
+HidppEvent o-- DeviceConnection
+HidppEvent o-- HostChange
+Event o-- DeviceConnection
+Event o-- HostChange
 
 class ReceiverHidActions
 class UdpNetActions

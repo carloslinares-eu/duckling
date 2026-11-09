@@ -5,6 +5,7 @@ duckling_embed_fixtures("${CMAKE_CURRENT_BINARY_DIR}/hw_logs_data.cpp"
 add_executable(duckling_tests
   test_main.cpp
   test_build_info.cpp
+  test_events.cpp
   test_hex.cpp
   test_report.cpp
   fixtures.cpp
