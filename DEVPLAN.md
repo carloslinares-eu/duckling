@@ -42,8 +42,8 @@ General rules:
 | 1.1 ✅ | `hidpp::Report`: encode and decode short/long reports. Unit tests use lines from `hw-logs/` | medium | 1 | HID++ 2.0 framing, doctest | – | 0.2 |
 | 1.2 ✅ | `hidpp::EventParser`: 0x41 connect notices and the CHANGE_HOST event. Tests use every C2/C3/C5 log line | high | 1 | HID++ notifications, Bolt receiver | – | 1.1 |
 | 1.3 ✅ | `io::Receiver`: enumerate 046D:C548 0xFF00/0x0001+0x0002, open (two handles on Windows), read with timeout, `request()` with swId 0x1 matching, late-reply dropping. Review fixes: #5. Thread safety: HID thread owns it (2.6) | high | 2 *(Linux and Windows backends checked in parallel)* | hidapi, hidraw, Windows HID, threading | carbon + Windows | 1.1 |
-| 1.4 | `hidpp::Features`: ping, getFeatureIndex, getHostInfo, setCurrentHost, HOSTS_INFO names, device name | high | 1 | HID++ features 0x0000/0x0005/0x1814/0x1815 | carbon | 1.3 |
-| 1.5 | `duckling status`: receiver, devices, own channel, host-name table | medium | 1 | CLI design | carbon + Windows | 1.4 |
+| 1.4 ✅ | `hidpp::Features`: ping, getFeature, discover, getHostInfo, setCurrentHost, HOSTS_INFO names, device name. Through a `hidpp::Requester` interface (implemented by `io::Receiver`), returning `Result<T>` | high | 1 | HID++ features 0x0000/0x0005/0x1814/0x1815 | carbon | 1.3 |
+| 1.5 | `duckling status`: receiver, devices (slot occupancy from the receiver's pairing register 0xB5, not ping errors; #6), own channel, host-name table | medium | 1 | CLI design | carbon + Windows | 1.4 |
 | 1.6 | `duckling switch <dev> <ch\|hostname>`, checks the ack | medium | 1 | – | ✋ carbon + Windows | 1.4 |
 | 1.7 | `duckling sniff` (replaces tools/hidpp-sniff.py, adds labels) | low | 1 | – | ✋ carbon | 1.2, 1.3 |
 | 1.8 | M1 acceptance: repeat C1, C5 and C6 using only `duckling`. Record the results in PLAN.md | medium | 1 (+1 Windows session) | `/run`, hardware test procedure | ✋ both | 1.5–1.7 |

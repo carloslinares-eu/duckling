@@ -83,7 +83,7 @@ package "io" {
     productId : uint16_t
     +sharedHandle() : bool
   }
-  class Receiver {
+  class Receiver <<final>> {
     +{static} open(ReceiverPaths) : optional<Receiver>
     +{static} openFirst() : optional<Receiver>
     +isOpen() : bool
@@ -151,13 +151,48 @@ package "hidpp" {
     +toHex(span) : string
     +parseHex(string_view) : optional<vector<uint8_t>>
   }
+  interface Requester {
+    +{abstract} request(Report) : optional<Report>
+  }
+  class "Result<T>" as Result <<value>> {
+    +ok() : bool
+    +value() : const T&
+    +failure() : const Failure&
+  }
+  class Failure <<value>> {
+    kind : FailureKind
+    code : uint8_t
+    +deviceUnreachable() : bool
+    +unknownDevice() : bool
+  }
+  enum FailureKind {
+    Timeout
+    Hidpp10
+    Hidpp20
+    Unsupported
+    BadReply
+  }
   class Features <<utility>> {
-    +ping(Receiver&, index) : optional<Version>
-    +getFeatureIndex(Receiver&, index, id) : optional<FeatureInfo>
-    +getHostInfo(...) : optional<HostInfo>
-    +setCurrentHost(...) : bool
-    +getHostNames(...) : array<string,3>
-    +getDeviceName(...) : string
+    +ping(Requester&, index) : Result<ProtocolVersion>
+    +getFeature(Requester&, index, featureId) : Result<FeatureInfo>
+    +discover(Requester&, index) : Result<DeviceFeatures>
+    +getHostInfo(Requester&, index, changeHost) : Result<HostInfo>
+    +setCurrentHost(Requester&, index, changeHost, host) : Result<Ack>
+    +getHostNames(Requester&, index, hostsInfo) : Result<vector<HostName>>
+    +getDeviceName(Requester&, index, deviceName) : Result<string>
+    +describe(Failure) : string
+  }
+  class DeviceFeatures <<value>> {
+    changeHost : uint8_t
+    changeHostVersion : uint8_t
+    hostsInfo : uint8_t
+    deviceName : uint8_t
+  }
+  class HostName <<value>> {
+    host : uint8_t
+    paired : bool
+    name : string
+    nameRead : bool
   }
   class EventParser {
     -slots_ : array<Slot{wpid, changeHost}, 7>
@@ -250,8 +285,14 @@ Receiver ..> Report
 Receiver --> ReceiverPaths
 ReceiverFn ..> ReceiverPaths
 Report --> ReportId
-Features ..> Receiver
+Requester <|.. Receiver
+Features ..> Requester
 Features ..> Report
+Features ..> Result
+Features ..> DeviceFeatures
+Features ..> HostName
+Result --> Failure
+Failure --> FailureKind
 EventParser ..> Report
 EventParser ..> HidppEvent
 EventParser ..> EventsFn

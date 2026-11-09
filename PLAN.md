@@ -238,6 +238,13 @@ Keep the sniffer running through all of these:
   - The keyboard's ch2 shows only the generic receiver name, because the
     fedora host never wrote its hostname to it. That's harmless, but the
     daemon could write it via 0x1815 so both devices agree.
+  - Re-read on Windows with duckling's own code (task 1.4,
+    `duckling_hwprobe`, devices on ch1):
+    - Keyboard: ch1 DESKTOP-CARLOS, ch2 and ch3 "Logitech Bolt receiver".
+    - Mouse: ch1 DESKTOP-CARLOS, ch2 fedora, ch3 "Logitech Bolt receiver".
+    - So **"carbon" is gone from the mouse's ch3**, and the keyboard's ch1
+      now says DESKTOP-CARLOS (Options+ wrote it in W1). Names aren't
+      stable; see decision 8.
 
 ## How it would be delivered
 - Language: C++20, built with CMake. One small executable per OS, same code
@@ -364,7 +371,11 @@ Keep the sniffer running through all of these:
      that table.
    - **Missing names:** the keyboard's ch2 shows "Logitech Bolt receiver". If
      a slot has no real name, the peer's HELLO/ARRIVED carries its channel
-     per device as a fallback. Later, duckling can write its own hostname
+     per device as a fallback. **This fallback is required, not optional:**
+     the names change over time (task 1.4: ch3 read "Logitech Bolt receiver"
+     on both devices, where C3/C6 had shown "carbon" on the mouse).
+     Solaar (`set_host_name`) and Options+ (W1) each write only their own
+     host's name, and only when they read the table. Later, duckling can write its own hostname
      into its slot (0x1815 setHostFriendlyName). Verify that write before
      enabling it.
    - **Cache:** the last-known own channels and the name table are saved to a
@@ -445,15 +456,19 @@ duckling/
 ### HID++ details used (all observed in hw-logs)
 | What | Request → reply / event |
 |---|---|
-| Ping | `11 i 00 1D 00 00 AA` → `11 i 00 1D 04 05 AA` (protocol 4.5) |
-| Find feature | `11 i 00 0D <hi> <lo>` → `… <index> <type> <version>` |
-| getHostInfo | `11 i F 0D` → `… <nbHost> <currHost>` (0-based) |
-| setCurrentHost | `11 i F 1D <host>` → ack `11 i F 1D 00` (arrives before the drop) |
+| Ping | `11 i 00 1S 00 00 A5` → `11 i 00 1S 04 05 A5` (protocol 4.5) |
+| Find feature | `11 i 00 0S <hi> <lo>` → `… <index> <type> <version>` (index 0 = missing) |
+| Device name (0x0005, idx 3) | `11 i N 0S` → `<len>`; `11 i N 1S <offset>` → up to 16 chars |
+| getHostInfo | `11 i F 0S` → `… <nbHost> <currHost>` (0-based) |
+| setCurrentHost | `11 i F 1S <host>` → ack `11 i F 1S 00` (arrives before the drop) |
+| Host names (0x1815; kbd 0x0A, mouse 0x0B) | `11 i H 0S` → `<caps> ? <nbHost> <curr>`; `11 i H 1S <h>` → `<h> <paired> <bus> <pages> <nameLen> <max>`; `11 i H 3S <h> <off>` → `<h> <off> <14 name bytes>` |
+| Receiver errors | `10 i 8F <feat> <fn\|S> <code> 00`: 0x04 = paired but not connected, 0x09 = empty slot |
 | Switch event (kbd, V2) | `11 i F 00 <from> <to>` about 37 ms before the drop; button presses only |
 | Receiver connect notice | `10 i 41 10 <st> <wpid lo> <wpid hi>`; bit 6 of `st` = offline |
 
-(`D` = duckling's software id in the low nibble; `F` = the CHANGE_HOST index
-found at startup.)
+(`S` = duckling's software id, 0x1, in the low nibble; `F`, `H`, `N` = the
+CHANGE_HOST, HOSTS_INFO and DEVICE_NAME indexes found at startup by
+`hidpp::discover`.)
 
 ### Router: state and rules
 State:

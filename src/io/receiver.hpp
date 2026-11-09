@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "hidpp/report.hpp"
+#include "hidpp/requester.hpp"
 
 struct hid_device_;  // hidapi's opaque handle (hidapi.h: typedef struct hid_device_ hid_device)
 
@@ -96,12 +97,12 @@ struct ReceiverPaths {
  * @warning Not thread-safe. In M1 the CLI drives it from one thread. The
  *          daemon (task 2.6) gives reading to one HID thread.
  */
-class Receiver {
+class Receiver final : public hidpp::Requester {
 public:
     /** @brief A closed receiver. Use open() or openFirst() to get an open one. */
     Receiver() = default;
     /** @brief Closes the handles. */
-    ~Receiver();
+    ~Receiver() override;
     /** @brief Not copyable: it owns OS handles. */
     Receiver(const Receiver&) = delete;
     /**
@@ -200,8 +201,18 @@ public:
      *         timeout or I/O error.
      * @throws std::invalid_argument if a HID++ 2.0 request's software id is 0.
      */
-    [[nodiscard]] std::optional<hidpp::Report> request(
-        const hidpp::Report& request, std::chrono::milliseconds timeout = kDefaultRequestTimeout);
+    [[nodiscard]] std::optional<hidpp::Report> request(const hidpp::Report& request,
+                                                       std::chrono::milliseconds timeout);
+
+    /**
+     * @brief request() with kDefaultRequestTimeout (hidpp::Requester interface).
+     * @param request Request to send; see the two-argument overload.
+     * @return The reply, or std::nullopt on timeout or I/O error.
+     * @throws std::invalid_argument if a HID++ 2.0 request's software id is 0.
+     */
+    [[nodiscard]] std::optional<hidpp::Report> request(const hidpp::Report& request) override {
+        return this->request(request, kDefaultRequestTimeout);
+    }
 
     /** @brief Max reports request() keeps for read(). */
     static constexpr std::size_t kMaxPending = 256;

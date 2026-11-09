@@ -6,6 +6,7 @@ add_executable(duckling_tests
   test_main.cpp
   test_build_info.cpp
   test_events.cpp
+  test_features.cpp
   test_hex.cpp
   test_receiver.cpp
   test_report.cpp

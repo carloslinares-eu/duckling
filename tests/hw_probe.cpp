@@ -5,7 +5,9 @@
  *
  * Usage: `duckling_hwprobe [listen_seconds]`
  *  1. Lists Bolt receivers and their HID++ collection paths.
- *  2. Opens the first one and pings device slots 1..6 (ROOT getProtocolVersion).
+ *  2. Opens the first one and pings device slots 1..6. For each device that
+ *     answers, reads its features, current host, host name table and name
+ *     (task 1.4). Read-only: it never switches a device.
  *  3. Optionally prints every report and parsed event for N seconds.
  */
 #include <chrono>
@@ -14,11 +16,47 @@
 #include <string>
 
 #include "hidpp/events.hpp"
+#include "hidpp/features.hpp"
 #include "hidpp/hex.hpp"
 #include "io/receiver.hpp"
 
 using namespace duckling;
 using namespace std::chrono_literals;
+
+/**
+ * @brief Print what the hidpp feature calls report for one device.
+ * @param rq    Requester (the open receiver).
+ * @param index Device slot that answered the ping.
+ */
+static void printFeatures(hidpp::Requester& rq, std::uint8_t index) {
+    const auto f = hidpp::discover(rq, index);
+    if (!f) {
+        std::printf("    features: %s\n", hidpp::describe(f.failure()).c_str());
+        return;
+    }
+    std::printf("    CHANGE_HOST index 0x%02x v%u, HOSTS_INFO 0x%02x, DEVICE_NAME 0x%02x\n", f->changeHost,
+                f->changeHostVersion, f->hostsInfo, f->deviceName);
+    if (f->deviceName != 0) {
+        const auto name = hidpp::getDeviceName(rq, index, f->deviceName);
+        std::printf("    name: %s\n", name ? name->c_str() : hidpp::describe(name.failure()).c_str());
+    }
+    if (const auto host = hidpp::getHostInfo(rq, index, f->changeHost)) {
+        std::printf("    hosts: %u, current: ch%u\n", host->count, host->current + 1);
+    } else {
+        std::printf("    host info: %s\n", hidpp::describe(host.failure()).c_str());
+    }
+    if (f->hostsInfo != 0) {
+        const auto names = hidpp::getHostNames(rq, index, f->hostsInfo);
+        if (!names) {
+            std::printf("    host names: %s\n", hidpp::describe(names.failure()).c_str());
+            return;
+        }
+        for (const auto& h : *names) {
+            std::printf("    ch%u: %s%s\n", h.host + 1, h.name.c_str(),
+                        !h.paired ? "(not paired)" : h.nameRead ? "" : "(name not readable)");
+        }
+    }
+}
 
 /**
  * @brief Entry point.
@@ -44,22 +82,19 @@ int main(int argc, char* argv[]) {
     }
     std::printf("opened\n");
 
-    const std::uint8_t ping[] = {0x00, 0x00, 0xAA};
     for (std::uint8_t i = 1; i <= hidpp::kMaxDeviceIndex; ++i) {
-        const auto req = hidpp::Report::make(hidpp::ReportId::Long, i, 0x00, 1, hidpp::kDucklingSwId, ping);
         const auto t0 = std::chrono::steady_clock::now();
-        const auto reply = rx->request(req);
+        const auto version = hidpp::ping(*rx, i);
         const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                             std::chrono::steady_clock::now() - t0).count();
-        if (!reply) {
-            std::printf("  slot %u: no reply (%lld ms)\n", i, static_cast<long long>(ms));
-        } else if (reply->isError()) {
-            std::printf("  slot %u: error %s (%lld ms)\n", i, hidpp::toHex(reply->bytes()).c_str(),
+        if (!version) {
+            std::printf("  slot %u: %s (%lld ms)\n", i, hidpp::describe(version.failure()).c_str(),
                         static_cast<long long>(ms));
-        } else {
-            std::printf("  slot %u: HID++ %u.%u, echo %02x (%lld ms)\n", i, reply->param(0),
-                        reply->param(1), reply->param(2), static_cast<long long>(ms));
+            continue;
         }
+        std::printf("  slot %u: HID++ %u.%u (%lld ms)\n", i, version->major, version->minor,
+                    static_cast<long long>(ms));
+        printFeatures(*rx, i);
     }
 
     if (listenSeconds > 0) {
