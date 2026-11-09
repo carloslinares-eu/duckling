@@ -1,0 +1,31 @@
+@startuml seq-mouse-switch
+' Mouse Easy-Switch pressed on Windows -> keyboard follows via ARRIVED (PLAN.md decision 7)
+
+title Mouse leaves Windows (ch1) for carbon (ch3): keyboard follows
+
+actor User
+participant "MX Master 3S" as mouse
+participant "MX Mechanical" as kbd
+participant "duckling\n(Windows)" as dw
+participant "duckling\n(carbon)" as dc
+
+User -> mouse : press Easy-Switch 3
+mouse -> dw : 0x41 mouse OFFLINE (no target info, CHANGE_HOST V1)
+dw -> dw : pending[mouse] = now + 1.5 s
+
+alt mouse reached carbon
+  mouse -> dc : 0x41 mouse online
+  dc -> dw : ARRIVED {carbon, mouse, ch3} (x3, 100 ms apart)
+  dw -> dw : verify HMAC, timestamp, seq
+  dw -> kbd : setCurrentHost(kbd, channelOf(kbd, carbon))
+  kbd --> dw : ack
+  dw -> dw : suppress(kbd, 5 s); clear pending
+  kbd -> dc : connects
+  dc -> dw : ARRIVED {carbon, kbd, ch3} (ignored: nothing pending)
+else no ARRIVED within 1.5 s
+  dw -> dw : mouse powered off / asleep / target off: do nothing
+else mouse comes back online here
+  dw -> dw : clear pending (power cycle)
+end
+
+@enduml

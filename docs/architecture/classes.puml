@@ -1,0 +1,199 @@
+@startuml classes
+' duckling: internal software architecture (one process)
+' Render: plantuml docs/architecture/*.puml
+
+title duckling: software architecture
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "app" {
+  class Main <<entry>> {
+    +main(argc, argv) : int
+    -- subcommands --
+    run | status | switch | sniff | gen-secret | version
+  }
+  class Daemon {
+    +Daemon(Config)
+    +run() : int
+    +stop()
+  }
+}
+
+package "core" {
+  class Router {
+    +Router(Clock&, HidActions&, NetActions&, Config&)
+    +onEvent(const Event&)
+    +onTick()
+    -devices_ : map<uint8_t, DeviceState>
+    -peers_ : map<string, Peer>
+    -pending_ : map<uint16_t, PendingFollow>
+    -suppress_ : map<uint16_t, TimePoint>
+    -peerAlive(host) : bool
+    -channelOf(wpid, host) : optional<uint8_t>
+  }
+  class EventQueue {
+    +push(Event)
+    +popUntil(TimePoint) : optional<Event>
+  }
+  class "Event" as Event <<variant>> {
+    DeviceOnline
+    DeviceOffline
+    KbdSwitchEvent(from, to)
+    PeerHello
+    PeerArrived
+  }
+  class Peer {
+    hostname : string
+    lastHello : TimePoint
+    channels : map<uint16_t, uint8_t>
+  }
+  class PendingFollow {
+    wpid : uint16_t
+    deadline : TimePoint
+  }
+  interface Clock {
+    +now() : TimePoint
+  }
+  interface HidActions {
+    +setHost(index, channel) : bool
+  }
+  interface NetActions {
+    +sendArrived(wpid, channel)
+  }
+  class Config {
+    secret : bytes
+    port : uint16_t
+    hostname : string
+    overrides : map
+    +load(path) : Config
+  }
+  class StateCache {
+    +load() / save()
+    ownChannels : map<uint16_t, uint8_t>
+    hostNames : map<uint16_t, array<string,3>>
+  }
+}
+
+package "io" {
+  class Receiver {
+    +open() : bool
+    +isOpen() : bool
+    +read(timeout) : optional<Report>
+    +request(Report, timeout) : optional<Report>
+    -dev_ : hid_device*
+    -writeMutex_ : mutex
+  }
+  class Device {
+    index : uint8_t
+    wpid : uint16_t
+    kind : Kind
+    name : string
+    changeHostIndex : uint8_t
+    changeHostVersion : uint8_t
+    online : bool
+    ownChannel : uint8_t
+    hostNames : array<string,3>
+  }
+  class HidWorker <<thread>> {
+    +start(EventQueue&)
+    -rescanEvery : 5 s
+  }
+}
+
+package "hidpp" {
+  class Report {
+    +reportId : uint8_t
+    +deviceIndex : uint8_t
+    +featureIndex : uint8_t
+    +function : uint8_t
+    +swId : uint8_t
+    +params : array<uint8_t,16>
+    +encode() : vector<uint8_t>
+    +decode(span) : optional<Report>
+  }
+  class Features <<utility>> {
+    +ping(Receiver&, index) : optional<Version>
+    +getFeatureIndex(Receiver&, index, id) : optional<FeatureInfo>
+    +getHostInfo(...) : optional<HostInfo>
+    +setCurrentHost(...) : bool
+    +getHostNames(...) : array<string,3>
+    +getDeviceName(...) : string
+  }
+  class EventParser <<utility>> {
+    +parse(const Report&) : optional<Event>
+  }
+}
+
+package "net" {
+  class UdpSocket {
+    +bind(port)
+    +broadcast(bytes)
+    +recv(timeout) : optional<Datagram>
+  }
+  class Message {
+    type : HELLO | ARRIVED
+    timestamp : uint64_t
+    seq : uint32_t
+    hostname : string
+    devices : vector<pair<uint16_t,uint8_t>>
+    +serialize(secret) : vector<uint8_t>
+    +parse(bytes, secret) : optional<Message>
+  }
+  class ReplayGuard {
+    +accept(host, seq, timestamp) : bool
+  }
+  class NetWorker <<thread>> {
+    +start(EventQueue&)
+    -helloEvery : 2 s
+  }
+  class HmacSha256 <<vendored>>
+}
+
+Main --> Daemon
+Daemon *-- Router
+Daemon *-- EventQueue
+Daemon *-- HidWorker
+Daemon *-- NetWorker
+Daemon --> Config
+Daemon --> StateCache
+
+HidWorker --> Receiver
+HidWorker --> EventParser
+HidWorker ..> EventQueue : push
+NetWorker --> UdpSocket
+NetWorker --> Message
+NetWorker --> ReplayGuard
+NetWorker ..> EventQueue : push
+Message ..> HmacSha256
+
+Router --> Clock
+Router --> HidActions
+Router --> NetActions
+Router o-- Peer
+Router o-- PendingFollow
+Router ..> Event
+Router ..> Device
+
+Receiver ..> Report
+Features ..> Receiver
+Features ..> Report
+EventParser ..> Report
+EventParser ..> Event
+
+class ReceiverHidActions
+class UdpNetActions
+HidActions <|.. ReceiverHidActions
+NetActions <|.. UdpNetActions
+ReceiverHidActions --> Features
+UdpNetActions --> UdpSocket
+
+note right of Router
+  Single owner of all state; runs only on the
+  main thread. Rules: PLAN.md decisions 7-8.
+  Clock/HidActions/NetActions are interfaces
+  so tests can drive it with fakes.
+end note
+
+@enduml

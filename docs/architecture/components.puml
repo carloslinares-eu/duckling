@@ -1,0 +1,59 @@
+@startuml components
+' duckling: deployment and component view
+' Render: plantuml docs/architecture/*.puml
+
+title duckling: deployment and components
+
+skinparam componentStyle uml2
+skinparam shadowing false
+
+node "Windows PC (DESKTOP-CARLOS), ch1" as win {
+  component "duckling.exe" as dwin
+  component "Logi Options+" as lop
+  interface "HID (usagePage 0xFF00)" as hidwin
+  dwin -- hidwin
+  lop -- hidwin
+}
+
+node "carbon (Debian 13), ch3" as carbon {
+  component "duckling (systemd)" as dcarbon
+  component "Solaar" as solaar
+  interface "/dev/hidrawN" as hidcarbon
+  dcarbon -- hidcarbon
+  solaar -- hidcarbon
+}
+
+node "fedora, ch2" as fedora {
+  component "duckling (systemd)" as dfedora
+}
+
+node "Bolt receiver 046D:C548" as rxwin
+node "Bolt receiver 046D:C548" as rxcarbon
+node "Bolt receiver 046D:C548" as rxfedora
+
+hidwin .. rxwin : USB
+hidcarbon .. rxcarbon : USB
+dfedora .. rxfedora : USB
+
+node "MX Mechanical\n(CHANGE_HOST V2)" as kbd
+node "MX Master 3S\n(CHANGE_HOST V1)" as mouse
+
+rxwin ..> kbd : Easy-Switch slot 1
+rxcarbon ..> kbd : slot 3
+rxfedora ..> kbd : slot 2
+rxwin ..> mouse : slot 1
+rxcarbon ..> mouse : slot 3
+rxfedora ..> mouse : slot 2
+
+cloud "LAN\nUDP broadcast :47474\nHELLO / ARRIVED (HMAC)" as lan
+dwin -- lan
+dcarbon -- lan
+dfedora -- lan
+
+note bottom of kbd
+  Each device is connected to exactly one
+  host at a time; duckling moves the
+  "follower" device with HID++ CHANGE_HOST.
+end note
+
+@enduml

@@ -377,6 +377,17 @@ Keep the sniffer running through all of these:
 
 ## Code design
 
+Diagrams (PlantUML) are in `docs/architecture/`:
+- `components.puml`: hosts, receivers, devices, LAN.
+- `classes.puml`: modules and classes inside one duckling process.
+- `seq-keyboard-switch.puml`: the keyboard leaves and the mouse follows.
+- `seq-mouse-switch.puml`: the mouse leaves and the keyboard follows (via
+  ARRIVED).
+
+All C++ is documented with Doxygen comments (`/** @brief … */`). Running
+`doxygen Doxyfile` writes HTML to `build/docs/`. The conventions are in
+`CLAUDE.md`.
+
 ### Process model
 A single executable, `duckling`, with subcommands. The daemon (`duckling
 run`) has three threads that talk through one event queue:
