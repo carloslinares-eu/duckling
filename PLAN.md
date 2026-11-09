@@ -45,11 +45,15 @@ Write each result in the "Result:" line. The whole set takes about 20 minutes.
   ```
   for d in /sys/class/hidraw/hidraw*; do python3 -c "import sys;b=open(sys.argv[1]+'/device/report_descriptor','rb').read();print(sys.argv[1].split('/')[-1],'HID++' if b'\x06\x00\xff' in b else '-')" $d; done
   ```
-- Raw report sniffer. It prints one HID++ report per line with a timestamp:
+- Recorder: `tools/hidpp-sniff.py`. It prints every HID++ report with a
+  timestamp, tags online/OFFLINE notices, and lets you type a label + Enter to
+  insert a marker. Save each run under `hw-logs/` so it can be read straight
+  from the repo:
   ```
-  sudo python3 -c "import os,time;fd=os.open('/dev/hidraw2',os.O_RDONLY)
-  while True: r=os.read(fd,64);print(f'{time.monotonic():.3f}',r.hex(' '))"
+  cd ~/Workspace/duckling
+  sudo python3 tools/hidpp-sniff.py | tee hw-logs/c2-$(date +%F-%H%M).txt
   ```
+  `tee` shows the output live and writes the file as your user, not root.
   HID++ basics for reading the output:
   - Byte 0 is the report type: 0x10 is a short report (7 bytes), 0x11 a long
     one (20 bytes).
@@ -66,7 +70,25 @@ Write each result in the "Result:" line. The whole set takes about 20 minutes.
    Windows. Press Easy-Switch 3 to bring it back.
 4. Repeat with the mouse.
 - Pass: both devices switch on command.
-- Result:
+- Result (2026-11-09, carbon):
+  - Receiver index: keyboard = 1, mouse = 2.
+  - CHANGE_HOST (0x1814) is at feature index 9 on the keyboard (V2) and 10 on
+    the mouse (V1).
+  - `solaar config "MX Mechanical" change-host 1` worked: the keyboard went
+    offline on carbon immediately. ✅
+  - The keyboard came up on Windows (DESKTOP-CARLOS). ✅
+  - `solaar config "MX Master 3S" change-host 1` also worked: the mouse
+    reached Windows (confirmed by user). ✅
+    - Explained: `solaar show` saw the mouse online again because the user
+      had tried it briefly on Windows and switched it back before the check
+      ran. No anomaly.
+  - Bonus: both devices support HOSTS INFO (0x1815), which stores a host name
+    for each channel (see C6). The daemon can map channel to hostname with no
+    config.
+  - The keyboard's Easy-Switch keys show up as controls ("Host Switch Channel
+    1–3") but are **not divertable**, so we can't intercept the key press.
+    We can only see the disconnect it causes, which is what Option A expects
+    anyway.
 
 ### C2. What does the receiver report when a device leaves? (Linux)
 Keep the sniffer running through all of these:
@@ -81,7 +103,41 @@ Keep the sniffer running through all of these:
   - Can a "switched away" disconnect be told apart from a "powered off" one?
   - How long after reconnecting does the 0x41 "connected" notice arrive? (This
     is when ARRIVED would be sent.)
-- Result:
+- Result (2026-11-09, two runs; the second had labeled steps). ✅ Answered.
+
+  | Action | Pre-drop event | Receiver notices |
+  |---|---|---|
+  | kbd Easy-Switch 1 | `11 01 09 00 02 00` (37 ms before) | 0x41 offline / online |
+  | kbd Easy-Switch 2 | `11 01 09 00 02 01` (37 ms before) | 0x41 offline / online |
+  | kbd power off/on | none | 0x41 offline / online |
+  | mouse Easy-Switch 1 | none | 0x41 offline / online |
+  | mouse power off/on | none | 0x41 offline / online |
+
+  - **The keyboard announces its target.** CHANGE_HOST (feature index 9)
+    sends an event `[current host, target host]`, both 0-based, just before it
+    drops: 02 = ch3 (carbon), 00 = ch1, 01 = ch2.
+    - A power-off sends no such event, so for the keyboard "switched to chN"
+      and "powered off" are cleanly distinguishable.
+  - **The mouse gives nothing.** Its CHANGE_HOST is V1, which has no event.
+    A switch and a power-off look identical (same offline notice), and the
+    target is unknown.
+  - Receiver connection notice: `10 <idx> 41 10 <st> <wpid lo> <wpid hi>`.
+    - Bit 6 of `st` = link down. Low bits = device type (1 = keyboard,
+      2 = mouse).
+    - The "online" notice is the first thing seen when a device arrives, so
+      ARRIVED can be sent at that moment.
+  - On reconnect, devices send `04 00 01 01 01` (0x1D4B "reconfiguration
+    needed"). Then about 40 writes follow, which is **Solaar running in the
+    background** (`solaar --window=hide`) reapplying settings. The
+    `10 ff 8f 80 03 02` lines after every drop are also Solaar.
+    - Duckling must coexist with Solaar on Linux, like with Options+ on
+      Windows. Reading in parallel is fine (hidraw copies input to every
+      reader).
+  - Mouse firmware: RBM22.00_B0003 is the latest available (checked
+    2026-11-09). There's no update that might add CHANGE_HOST V2, so the
+    mouse direction relies on ARRIVED.
+  - Still to verify: on Windows, the keyboard's first byte should read 00
+    (ch1) when it leaves Windows.
 
 ### C3. What happens when the target host is off? (Linux)
 1. With the Windows PC off or asleep, run `solaar config "MX Mechanical"
@@ -90,7 +146,16 @@ Keep the sniffer running through all of these:
    manual Easy-Switch press?
 - This decides whether the daemon must check that a peer is alive (HELLO)
   before switching a device away, even on Linux.
-- Result:
+- Result (2026-11-09, log `hw-logs/c3-2026-11-09-1542.txt`): ❌ **the device
+  is stranded.**
+  - The keyboard was switched by Easy-Switch 2 while fedora was off. It
+    announced `09 00 02 01`, went OFFLINE, and was still offline more than
+    90 s later.
+  - It doesn't fall back to ch3 by itself. The user has to press Easy-Switch
+    3.
+  - Implication: duckling must **never send a follower to a host that isn't
+    alive**. Otherwise one stranded device becomes two, and the user loses
+    both mouse and keyboard.
 
 ### C4. Can our program share the receiver with Logi Options+? (Windows, blocker)
 1. Download hidapitester (github.com/todbot/hidapitester, a single .exe). Keep
@@ -115,7 +180,7 @@ Keep the sniffer running through all of these:
 - Result:
 
 ### C5. Does Options+ undo our switch? (Windows)
-1. With Flow turned off in Options+, switch the keyboard to ch3 using the C4
+1. With Options+ running, switch the keyboard to ch3 using the C4
    command.
 2. Does it stay on ch3? Do Options+ settings still apply after it comes back to
    ch1?
@@ -125,7 +190,14 @@ Keep the sniffer running through all of these:
 1. Press Easy-Switch 1, 2 and 3 on each device and note which computer each one
    reaches.
 2. Confirms decision 3: ch1 = Windows, ch2 = Linux-A, ch3 = Linux-B.
-- Result:
+- Result (2026-11-09, read from HOSTS INFO with no button pressing): ✅ same
+  numbering on both devices.
+  - Keyboard: ch1 DESKTOP-CARLOS, ch2 "Logitech Bolt receiver", ch3 carbon.
+  - Mouse: ch1 DESKTOP-CARLOS, ch2 fedora, ch3 carbon.
+  - So Linux-A = fedora (ch2) and Linux-B = carbon (ch3, this machine).
+  - The keyboard's ch2 shows only the generic receiver name, because the
+    fedora host never wrote its hostname to it. That's harmless, but the
+    daemon could write it via 0x1815 so both devices agree.
 
 ## How it would be delivered
 - Language: C++20, built with CMake. One small executable per OS, same code
@@ -158,8 +230,8 @@ Keep the sniffer running through all of these:
    Consequence: on Linux "the other channel" is always Windows, so that side is
    easy. On Windows the daemon has to pick between ch2 and ch3.
    Ways to choose (to be decided):
-   a. Device tells us: check whether the device sends anything naming the
-      target channel before it drops (hardware check C2).
+   a. Device tells us. C2 result: **the keyboard does** (CHANGE_HOST event with
+      the target channel); **the mouse does not**.
    b. LAN presence beacon: each daemon broadcasts "alive on channel N" over UDP.
       Windows sends the follower to whichever Linux host is up. This is a small
       bit of networking, not Option B. **Current favorite.**
@@ -182,8 +254,9 @@ Keep the sniffer running through all of these:
      for its current host (CHANGE_HOST getHostInfo), so it needs no config.
 4. Logi Options+ stays installed on Windows, so our daemon has to share the
    receiver with it.
-   - Turn off Flow in Options+ so the two tools don't both try to switch
-     devices.
+   - Logi Flow is inactive and can't conflict. It needs Options+ on at least
+     two computers, and only the Windows PC has it. That's why duckling
+     exists.
    - Hardware check C4 (opening the HID++ interface while Options+ runs) is now a
      blocker. If it fails, the fallbacks are, in order:
      1. retry when the open fails,
@@ -223,6 +296,18 @@ Keep the sniffer running through all of these:
        built and linked statically on both OSes.
      - It's worth revisiting for Option B, where reliable messaging (clipboard,
        input forwarding) would actually benefit from it.
+7. Routing after C2. The two directions behave differently:
+   - **Keyboard leaves → mouse follows:** the keyboard's pre-drop event gives
+     the exact target channel. Send the mouse there only if that host is
+     alive (a recent HELLO, see C3). No guessing, but the network is still
+     needed for the liveness check.
+   - **Mouse leaves → keyboard follows:** a mouse disconnect is ambiguous
+     (switch or power-off) and has no target. Wait up to about 1.5 s for an
+     ARRIVED message from the host the mouse reached, then send the keyboard
+     to that channel. With no ARRIVED, treat it as power-off, sleep, or a
+     dead target and do nothing. So the LAN message is required for this direction on every
+     host, not just Windows.
+   - A keyboard power-off (no pre-drop event) does nothing.
 
 ## Open questions
 (none; all answered)
