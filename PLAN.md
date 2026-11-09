@@ -556,7 +556,20 @@ State cache: `/var/lib/duckling/state.json` and
   0x2B5, sub 0x5N / 0x6N; `hw-logs/r1-…`), so devices on another host are
   listed too, without pinging them.
 - `duckling switch <mouse|keyboard|all> <channel|hostname>`: manual switch.
-  It replaces solaar/hidpp-win.py for day-to-day use.
+  It replaces solaar/hidpp-win.py for day-to-day use. It only acts on
+  devices connected to this computer, matches host names case-insensitively
+  in the device's HOSTS_INFO table (refusing ambiguous names), and counts a
+  switch as done when the ack is followed by the receiver's OFFLINE notice.
+  - Checked on hardware (task 1.6, 2026-11-09), every step confirmed by
+    `duckling status` on the other computer:
+    - Windows `switch mouse 3` → mouse on carbon ch3.
+    - carbon `switch mouse desktop-carlos` → back on Windows ch1.
+    - Windows `switch all 3` → both on carbon.
+    - carbon `switch all DESKTOP-CARLOS` → both back on Windows, 1.76 s
+      for the whole command.
+  - Each switch got its ack and then the OFFLINE notice, as in C5.
+  - Switching to carbon by name isn't possible yet: carbon's channel still
+    reads "Logitech Bolt receiver" (decision 8).
 - `duckling sniff`: the C++ version of tools/hidpp-sniff.py.
 - `duckling gen-secret`.
 

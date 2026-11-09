@@ -65,6 +65,20 @@ struct PairingInfo {
 [[nodiscard]] Result<PairingInfo> getPairingInfo(Requester& rq, std::uint8_t slot);
 
 /**
+ * @brief getPairingInfo(), but an "unknown device" answer is read twice.
+ *
+ * The receiver's error reply doesn't say which slot it answers, so another
+ * program's empty-slot error can look like ours (issue #7). An empty slot
+ * is only believed when two reads agree.
+ *
+ * @param rq   The receiver.
+ * @param slot Device slot, 1..6.
+ * @return The pairing info or the failure.
+ * @throws std::invalid_argument if @p slot is outside 1..6.
+ */
+[[nodiscard]] Result<PairingInfo> getPairingInfoConfirmed(Requester& rq, std::uint8_t slot);
+
+/**
  * @brief Read a slot's codename, a short name the device gave the receiver.
  * @param rq   The receiver.
  * @param slot Device slot, 1..6.

@@ -9,7 +9,7 @@
 #include <cstdlib>
 #include <utility>
 
-#include "io/receiver.hpp"
+#include "app/cli_common.hpp"
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -23,22 +23,6 @@
 namespace duckling::app {
 
 namespace {
-
-/**
- * @brief Name of a device kind for the report.
- * @param kind Kind.
- * @return "keyboard", "mouse" or "device".
- */
-const char* kindName(hidpp::DeviceKind kind) {
-    switch (kind) {
-        case hidpp::DeviceKind::Keyboard:
-            return "keyboard";
-        case hidpp::DeviceKind::Mouse:
-            return "mouse";
-        default:
-            return "device";
-    }
-}
 
 /**
  * @brief printf into a std::string.
@@ -56,41 +40,6 @@ void appendf(std::string& out, const char* fmt, ...) {
     std::vsnprintf(buf, sizeof buf, fmt, args);
     va_end(args);
     out += buf;
-}
-
-/**
- * @brief Make a device-supplied name safe to print.
- *
- * Host names come from other computers (HOSTS_INFO), so control characters
- * and ESC sequences are replaced instead of being sent to the terminal.
- *
- * @param s Name as read.
- * @return The name with bytes outside 0x20..0x7E replaced by '?'.
- */
-std::string printable(const std::string& s) {
-    std::string out = s;
-    for (char& c : out) {
-        const auto u = static_cast<unsigned char>(c);
-        if (u < 0x20 || u > 0x7E) c = '?';
-    }
-    return out;
-}
-
-/**
- * @brief Read a slot's pairing info, confirming "unknown device" once.
- *
- * The receiver's error reply doesn't say which slot it answers, so another
- * program's empty-slot error can look like ours (issue #7). An empty slot
- * is only believed when two reads agree.
- *
- * @param rq   Receiver.
- * @param slot Device slot.
- * @return The pairing info or the failure.
- */
-hidpp::Result<hidpp::PairingInfo> readPairing(hidpp::Requester& rq, std::uint8_t slot) {
-    auto first = hidpp::getPairingInfo(rq, slot);
-    if (first || !first.failure().unknownDevice()) return first;
-    return hidpp::getPairingInfo(rq, slot);
 }
 
 /**
@@ -133,7 +82,7 @@ void readDevice(hidpp::Requester& rq, DeviceStatus& d) {
 StatusReport collectStatus(hidpp::Requester& rq, std::string receiver, std::string thisHost) {
     StatusReport report{std::move(receiver), std::move(thisHost), {}, {}};
     for (std::uint8_t slot = 1; slot <= hidpp::kMaxDeviceIndex; ++slot) {
-        auto pairing = readPairing(rq, slot);
+        auto pairing = hidpp::getPairingInfoConfirmed(rq, slot);
         if (!pairing) {
             // r1: empty slots answer HID++ 1.0 error 0x08.
             if (!pairing.failure().unknownDevice()) {
@@ -216,25 +165,11 @@ std::string localHostName() {
 }
 
 int runStatus() {
-    const auto receivers = io::findReceivers();
-    if (receivers.empty()) {
-        std::fprintf(stderr, "duckling: no Logi Bolt receiver found\n");
-        return 1;
-    }
-    for (const auto& paths : receivers) {
-        auto rx = io::Receiver::open(paths);
-        if (!rx) continue;
-        const auto report = collectStatus(*rx, paths.shortPath, localHostName());
-        std::fputs(formatStatus(report).c_str(), stdout);
-        return report.problems.empty() ? 0 : 1;
-    }
-    std::fprintf(stderr, "duckling: found a Logi Bolt receiver but can't open it:\n");
-    for (const auto& paths : receivers) {
-        std::fprintf(stderr, "  %s\n", paths.shortPath.c_str());
-        if (!paths.sharedHandle()) std::fprintf(stderr, "  %s\n", paths.longPath.c_str());
-    }
-    std::fprintf(stderr, "On Linux, the user needs access to its hidraw node (a udev rule).\n");
-    return 1;
+    auto rx = openReceiverOrExplain();
+    if (!rx) return 1;
+    const auto report = collectStatus(*rx, rx->paths().shortPath, localHostName());
+    std::fputs(formatStatus(report).c_str(), stdout);
+    return report.problems.empty() ? 0 : 1;
 }
 
 }  // namespace duckling::app

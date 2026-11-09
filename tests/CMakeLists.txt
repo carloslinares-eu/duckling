@@ -12,6 +12,7 @@ add_executable(duckling_tests
   test_receiver_info.cpp
   test_report.cpp
   test_status.cpp
+  test_switch.cpp
   fixtures.cpp
   test_fixtures.cpp
   "${CMAKE_CURRENT_BINARY_DIR}/hw_logs_data.cpp"

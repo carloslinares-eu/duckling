@@ -99,6 +99,9 @@ ctest --preset windows-msvc-release
 ```
 duckling status      show the receiver, paired devices, this host's channel
                      on each device and the devices' host-name tables
+duckling switch <mouse|keyboard|all> <channel|hostname>
+                     send devices connected here to channel 1-3, or to the
+                     channel named after a host (case-insensitive)
 duckling version     print version and build information
 duckling help        show usage
 ```
@@ -123,7 +126,16 @@ slot 2  mouse     MX Master 3S  (wpid B034, serial E576CD4A)
 Devices on another host show as "not connected here". The receiver still
 knows them, so they're listed without waiting for a timeout.
 
-Planned: `duckling run` (the daemon), `switch`, `sniff` and `gen-secret`.
+Switching both devices from carbon back to Windows:
+```
+$ duckling switch all DESKTOP-CARLOS
+keyboard: ch3 (Logitech Bolt receiver) -> ch1 (DESKTOP-CARLOS)
+mouse: ch3 (Logitech Bolt receiver) -> ch1 (DESKTOP-CARLOS)
+```
+`switch` doesn't check that the target computer is on. A device sent to a
+computer that is off stays offline until you press its Easy-Switch button.
+
+Planned: `duckling run` (the daemon), `sniff` and `gen-secret`.
 
 ## Repository layout
 

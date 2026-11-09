@@ -25,6 +25,34 @@ package "app" {
     +localHostName() : string
     +runStatus() : int
   }
+  class SwitchHost <<utility>> {
+    +parseDeviceSelector(arg) : optional<DeviceSelector>
+    +parseSwitchTarget(arg) : optional<SwitchTarget>
+    +switchDevices(Requester&, LinkWatcher&, DeviceSelector, SwitchTarget) : vector<SwitchOutcome>
+    +runSwitch(device, target) : int
+  }
+  interface LinkWatcher {
+    +{abstract} arm(slot)
+    +{abstract} waitForLinkDown(slot, timeout) : bool
+  }
+  class CliCommon <<utility>> {
+    +kindName(DeviceKind) : const char*
+    +printable(string) : string
+    +openReceiverOrExplain() : optional<Receiver>
+  }
+  class ReceiverLinkWatcher <<final>>
+  class SwitchOutcome <<value>> {
+    slot : uint8_t
+    kind : DeviceKind
+    ok : bool
+    message : string
+  }
+  note bottom of SwitchHost
+    arm(), then setCurrentHost; ok = ack (or no ack /
+    "unreachable") followed by a fresh 0x41 OFFLINE
+    within 3 s. Unpaired channels are refused (#8).
+    No liveness check in M1 (C3).
+  end note
   class StatusReport <<value>> {
     receiver : string
     thisHost : string
@@ -220,6 +248,7 @@ package "hidpp" {
   }
   class ReceiverInfo <<utility>> {
     +getPairingInfo(Requester&, slot) : Result<PairingInfo>
+    +getPairingInfoConfirmed(Requester&, slot) : Result<PairingInfo>
     +getCodename(Requester&, slot) : Result<string>
   }
   class PairingInfo <<value>> {
@@ -299,6 +328,16 @@ package "net" {
 
 Main --> Daemon
 Main ..> Status
+Main ..> SwitchHost
+Status ..> CliCommon
+SwitchHost ..> CliCommon
+CliCommon ..> Receiver
+SwitchHost ..> LinkWatcher
+LinkWatcher <|.. ReceiverLinkWatcher
+ReceiverLinkWatcher --> Receiver
+SwitchHost ..> SwitchOutcome
+SwitchHost ..> Features
+SwitchHost ..> ReceiverInfo
 Status ..> StatusReport
 StatusReport --> DeviceStatus
 Status ..> Features

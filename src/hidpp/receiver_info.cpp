@@ -58,6 +58,12 @@ Result<PairingInfo> getPairingInfo(Requester& rq, std::uint8_t slot) {
     return info;
 }
 
+Result<PairingInfo> getPairingInfoConfirmed(Requester& rq, std::uint8_t slot) {
+    auto first = getPairingInfo(rq, slot);
+    if (first || !first.failure().unknownDevice()) return first;
+    return getPairingInfo(rq, slot);
+}
+
 Result<std::string> getCodename(Requester& rq, std::uint8_t slot) {
     checkSlot(slot);
     auto r = readInfo(rq, static_cast<std::uint8_t>(kBoltCodename + slot), 0x01);
