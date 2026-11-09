@@ -124,4 +124,10 @@ Code conventions (C++20, Doxygen on every public symbol) are in
 
 ## License
 
-Not chosen yet.
+duckling is free software, licensed under the **GNU General Public License
+v3.0**. See [LICENSE](LICENSE).
+
+The dependencies keep their own licenses:
+- hidapi: GPL-3.0, BSD or its original license; used here under GPL-3.0.
+- toml++: MIT.
+- doctest: MIT, used for the tests only.
