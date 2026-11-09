@@ -221,6 +221,10 @@ private:
  * request from the reply to a new one with the same header;
  * io::Receiver handles that.
  *
+ * A HID++ 1.0 error to a long register read (`10 ff 8f 83 b5 08 00`)
+ * doesn't carry the sub-register, so it matches any read of that register,
+ * including another program's (issue #7).
+ *
  * Example from PLAN.md C4: request `11 01 00 1a 00 00 aa`, reply
  * `11 01 00 1a 04 05 aa` (ping answered, protocol 4.5).
  *

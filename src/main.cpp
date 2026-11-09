@@ -2,14 +2,15 @@
  * @file main.cpp
  * @brief Entry point of the `duckling` executable.
  *
- * Only `version` exists so far (task 0.2). The other subcommands
- * (`run`, `status`, `switch`, `sniff`, `gen-secret`) arrive with M1 and M2,
- * see DEVPLAN.md.
+ * Commands so far: `version` (task 0.2) and `status` (task 1.5). The others
+ * (`run`, `switch`, `sniff`, `gen-secret`) arrive with M1 and M2, see
+ * DEVPLAN.md.
  */
 #include <cstdio>
 #include <string_view>
 
 #include "app/build_info.hpp"
+#include "app/status.hpp"
 
 namespace {
 
@@ -22,6 +23,8 @@ void printUsage(const char* argv0) {
                  "usage: %s <command>\n"
                  "\n"
                  "commands:\n"
+                 "  status     show the receiver, paired devices, this host's channel\n"
+                 "             on each device and the devices' host-name tables\n"
                  "  version    print version and build information\n"
                  "  help       show this text\n",
                  argv0);
@@ -33,7 +36,7 @@ void printUsage(const char* argv0) {
  * @brief Program entry point.
  * @param argc Argument count.
  * @param argv Argument vector.
- * @return 0 on success, 2 on a usage error.
+ * @return 0 on success, 1 if the command failed, 2 on a usage error.
  */
 int main(int argc, char* argv[]) {
     const char* argv0 = (argc > 0 && argv[0] != nullptr) ? argv[0] : "duckling";
@@ -52,6 +55,7 @@ int main(int argc, char* argv[]) {
         std::puts(duckling::app::buildInfo().c_str());
         return 0;
     }
+    if (command == "status") return duckling::app::runStatus();
     if (command == "help" || command == "--help" || command == "-h") {
         printUsage(argv0);
         return 0;

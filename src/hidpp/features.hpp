@@ -156,6 +156,19 @@ private:
     std::variant<T, Failure> v_;  ///< Value or failure.
 };
 
+/**
+ * @brief Send any request and turn the outcome into a Result.
+ *
+ * The building block of every call here. Error replies become a Failure:
+ * `10 i 8F <feat> <fn|sw> <code> 00` (HID++ 1.0, from the receiver) or
+ * `11 i FF <feat> <fn|sw> <code> …` (HID++ 2.0, from the device).
+ *
+ * @param rq      Where to send it.
+ * @param request The request.
+ * @return The reply, or Timeout / Hidpp10 / Hidpp20.
+ */
+[[nodiscard]] Result<Report> send(Requester& rq, const Report& request);
+
 /** @brief Value of calls that return nothing but an acknowledgement. */
 struct Ack {
     /** @brief Equality, for tests. */

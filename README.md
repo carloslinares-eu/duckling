@@ -97,12 +97,33 @@ ctest --preset windows-msvc-release
 ## Usage
 
 ```
+duckling status      show the receiver, paired devices, this host's channel
+                     on each device and the devices' host-name tables
 duckling version     print version and build information
 duckling help        show usage
 ```
 
-Planned: `duckling run` (the daemon), `status`, `switch`, `sniff` and
-`gen-secret`.
+Example (Windows, both devices connected there):
+```
+receiver   Logi Bolt  \\?\HID#VID_046D&PID_C548&MI_02&Col01#…
+this host  DESKTOP-CARLOS
+
+slot 1  keyboard  MX Mechanical  (wpid B366, serial 284C459C)
+        connected here, HID++ 4.5, this host is ch1 of 3
+        ch1  DESKTOP-CARLOS   <- this host
+        ch2  Logitech Bolt receiver
+        ch3  Logitech Bolt receiver
+
+slot 2  mouse     MX Master 3S  (wpid B034, serial E576CD4A)
+        connected here, HID++ 4.5, this host is ch1 of 3
+        ch1  DESKTOP-CARLOS   <- this host
+        ch2  fedora
+        ch3  Logitech Bolt receiver
+```
+Devices on another host show as "not connected here". The receiver still
+knows them, so they're listed without waiting for a timeout.
+
+Planned: `duckling run` (the daemon), `switch`, `sniff` and `gen-secret`.
 
 ## Repository layout
 

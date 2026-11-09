@@ -551,7 +551,10 @@ State cache: `/var/lib/duckling/state.json` and
 ### CLI
 - `duckling run`: the daemon.
 - `duckling status`: receiver, devices, own channels, host-name table, live
-  peers. Peers are read by listening for 3 s.
+  peers. Peers are read by listening for 3 s (added in M2, task 2.8).
+  Paired devices come from the receiver's pairing register (long register
+  0x2B5, sub 0x5N / 0x6N; `hw-logs/r1-…`), so devices on another host are
+  listed too, without pinging them.
 - `duckling switch <mouse|keyboard|all> <channel|hostname>`: manual switch.
   It replaces solaar/hidpp-win.py for day-to-day use.
 - `duckling sniff`: the C++ version of tools/hidpp-sniff.py.

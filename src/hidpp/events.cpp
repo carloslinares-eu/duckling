@@ -9,18 +9,6 @@ namespace duckling::hidpp {
 namespace {
 
 /**
- * @brief Status bit set when the device's link is down.
- * @see PLAN.md C2: `10 01 41 10 41 66 b3` (0x41: bit 6 set) = keyboard
- *      OFFLINE, `10 01 41 10 01 66 b3` (0x01) = keyboard online.
- */
-constexpr std::uint8_t kLinkDownBit = 0x40;
-/**
- * @brief Status bits holding the device kind.
- * @see PLAN.md C2: low nibble 1 for the MX Mechanical, 2 for the MX Master 3S.
- */
-constexpr std::uint8_t kKindMask = 0x0F;
-
-/**
  * @brief Whether a device index refers to a paired device slot.
  * @param index Device index from a report.
  * @return True for 1..kMaxDeviceIndex.
@@ -47,11 +35,11 @@ std::optional<DeviceConnection> parseDeviceConnection(const Report& report) noex
         !isDeviceSlot(report.deviceIndex())) {
         return std::nullopt;
     }
-    const std::uint8_t status = report.param(0);
+    const LinkStatus status = decodeLinkStatus(report.param(0));
     DeviceConnection c;
     c.deviceIndex = report.deviceIndex();
-    c.online = (status & kLinkDownBit) == 0;
-    c.rawKind = static_cast<std::uint8_t>(status & kKindMask);
+    c.online = status.linkUp;
+    c.rawKind = status.rawKind;
     c.wpid = static_cast<std::uint16_t>(report.param(1) | (report.param(2) << 8));
     return c;
 }

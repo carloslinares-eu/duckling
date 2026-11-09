@@ -176,6 +176,13 @@ std::optional<hidpp::Report> Receiver::readHandle(hid_device_* handle, int timeo
 bool Receiver::consumeLateReply(const hidpp::Report& report) {
     const auto now = Clock::now();
     std::erase_if(timedOut_, [&](const TimedOut& t) { return t.expires <= now; });
+    // HID++ 1.0 errors to register reads (`10 ff 8f 83 b5 08 00`) don't say
+    // which sub-register they answer, so they can't be attributed to one
+    // timed-out request. Pass them on instead of guessing (issue #7).
+    if (report.featureIndex() == hidpp::kHidpp10ErrorSubId &&
+        hidpp::isRegisterAccess(report.functionByte())) {
+        return false;
+    }
     const auto it = std::find_if(timedOut_.begin(), timedOut_.end(),
                                  [&](const TimedOut& t) { return hidpp::isReplyTo(t.request, report); });
     if (it == timedOut_.end()) return false;

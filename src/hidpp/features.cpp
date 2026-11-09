@@ -38,19 +38,8 @@ constexpr std::size_t kMaxNameLength = 64;
  */
 Result<Report> call(Requester& rq, std::uint8_t deviceIndex, std::uint8_t featureIndex,
                     std::uint8_t function, std::span<const std::uint8_t> params = {}) {
-    const Report req = Report::make(ReportId::Long, deviceIndex, featureIndex, function,
-                                    kDucklingSwId, params);
-    const auto reply = rq.request(req);
-    if (!reply) return Failure{FailureKind::Timeout};
-    if (reply->featureIndex() == kHidpp10ErrorSubId) {
-        // 10 i 8F <feat> <fn|sw> <code> 00
-        return Failure{FailureKind::Hidpp10, reply->param(1)};
-    }
-    if (reply->featureIndex() == kHidpp20ErrorFeature) {
-        // 11 i FF <feat> <fn|sw> <code> …
-        return Failure{FailureKind::Hidpp20, reply->param(1)};
-    }
-    return *reply;
+    return send(rq, Report::make(ReportId::Long, deviceIndex, featureIndex, function,
+                                 kDucklingSwId, params));
 }
 
 /**
@@ -93,6 +82,20 @@ void trimNuls(std::string& s) {
 }
 
 }  // namespace
+
+Result<Report> send(Requester& rq, const Report& request) {
+    const auto reply = rq.request(request);
+    if (!reply) return Failure{FailureKind::Timeout};
+    if (reply->featureIndex() == kHidpp10ErrorSubId) {
+        // 10 i 8F <feat> <fn|sw> <code> 00
+        return Failure{FailureKind::Hidpp10, reply->param(1)};
+    }
+    if (reply->featureIndex() == kHidpp20ErrorFeature) {
+        // 11 i FF <feat> <fn|sw> <code> …
+        return Failure{FailureKind::Hidpp20, reply->param(1)};
+    }
+    return *reply;
+}
 
 std::string describe(const Failure& failure) {
     char buf[96];

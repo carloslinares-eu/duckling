@@ -19,6 +19,30 @@ package "app" {
     +run() : int
     +stop()
   }
+  class Status <<utility>> {
+    +collectStatus(Requester&, receiver, thisHost) : StatusReport
+    +formatStatus(StatusReport) : string
+    +localHostName() : string
+    +runStatus() : int
+  }
+  class StatusReport <<value>> {
+    receiver : string
+    thisHost : string
+    devices : vector<DeviceStatus>
+    problems : vector<string>
+  }
+  class DeviceStatus <<value>> {
+    pairing : PairingInfo
+    codename : string
+    version : optional<ProtocolVersion>
+    pingFailure : optional<Failure>
+    name : string
+    features : optional<DeviceFeatures>
+    host : optional<HostInfo>
+    hostNames : vector<HostName>
+    problems : vector<string>
+    +here() : bool
+  }
 }
 
 package "core" {
@@ -194,6 +218,23 @@ package "hidpp" {
     name : string
     nameRead : bool
   }
+  class ReceiverInfo <<utility>> {
+    +getPairingInfo(Requester&, slot) : Result<PairingInfo>
+    +getCodename(Requester&, slot) : Result<string>
+  }
+  class PairingInfo <<value>> {
+    slot : uint8_t
+    linkUp : bool
+    rawKind : uint8_t
+    wpid : uint16_t
+    serial : uint32_t
+    +kind() : DeviceKind
+  }
+  note bottom of ReceiverInfo
+    Bolt long register 0x2B5: sub 0x5N pairing,
+    0x6N codename; empty slot = error 0x08 (r1).
+    Works while the device is on another host.
+  end note
   class EventParser {
     -slots_ : array<Slot{wpid, changeHost}, 7>
     +setChangeHostFeature(deviceIndex, wpid, featureIndex)
@@ -257,6 +298,15 @@ package "net" {
 }
 
 Main --> Daemon
+Main ..> Status
+Status ..> StatusReport
+StatusReport --> DeviceStatus
+Status ..> Features
+Status ..> ReceiverInfo
+Status ..> Receiver
+ReceiverInfo ..> Requester
+ReceiverInfo ..> PairingInfo
+DeviceStatus --> PairingInfo
 Daemon *-- Router
 Daemon *-- EventQueue
 Daemon *-- HidWorker

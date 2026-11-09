@@ -41,6 +41,34 @@ enum class DeviceKind : std::uint8_t {
 [[nodiscard]] DeviceKind toDeviceKind(std::uint8_t raw) noexcept;
 
 /**
+ * @brief Status bit set when the device's link is down.
+ * @see PLAN.md C2: `10 01 41 10 41 66 b3` (0x41: bit 6 set) = keyboard
+ *      OFFLINE, `10 01 41 10 01 66 b3` (0x01) = keyboard online.
+ */
+inline constexpr std::uint8_t kLinkDownBit = 0x40;
+/**
+ * @brief Status bits holding the device kind.
+ * @see PLAN.md C2: low nibble 1 for the MX Mechanical, 2 for the MX Master 3S.
+ */
+inline constexpr std::uint8_t kKindMask = 0x0F;
+
+/** @brief A decoded link status byte. */
+struct LinkStatus {
+    bool linkUp = false;       ///< Bit 6 clear.
+    std::uint8_t rawKind = 0;  ///< Low nibble, see toDeviceKind().
+};
+
+/**
+ * @brief Decode the status byte shared by the 0x41 connection notice and the
+ *        Bolt pairing register (hidpp::getPairingInfo; `hw-logs/r1-…`).
+ * @param status The status byte.
+ * @return Link state and raw kind.
+ */
+[[nodiscard]] constexpr LinkStatus decodeLinkStatus(std::uint8_t status) noexcept {
+    return LinkStatus{(status & kLinkDownBit) == 0, static_cast<std::uint8_t>(status & kKindMask)};
+}
+
+/**
  * @brief The receiver reports that a paired device's link went up or down.
  *
  * Short frame (PLAN.md C2), sent by the receiver for device `i`:

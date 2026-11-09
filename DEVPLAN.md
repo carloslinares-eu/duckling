@@ -43,7 +43,7 @@ General rules:
 | 1.2 ✅ | `hidpp::EventParser`: 0x41 connect notices and the CHANGE_HOST event. Tests use every C2/C3/C5 log line | high | 1 | HID++ notifications, Bolt receiver | – | 1.1 |
 | 1.3 ✅ | `io::Receiver`: enumerate 046D:C548 0xFF00/0x0001+0x0002, open (two handles on Windows), read with timeout, `request()` with swId 0x1 matching, late-reply dropping. Review fixes: #5. Thread safety: HID thread owns it (2.6) | high | 2 *(Linux and Windows backends checked in parallel)* | hidapi, hidraw, Windows HID, threading | carbon + Windows | 1.1 |
 | 1.4 ✅ | `hidpp::Features`: ping, getFeature, discover, getHostInfo, setCurrentHost, HOSTS_INFO names, device name. Through a `hidpp::Requester` interface (implemented by `io::Receiver`), returning `Result<T>` | high | 1 | HID++ features 0x0000/0x0005/0x1814/0x1815 | carbon | 1.3 |
-| 1.5 | `duckling status`: receiver, devices (slot occupancy from the receiver's pairing register 0xB5, not ping errors; #6), own channel, host-name table | medium | 1 | CLI design | carbon + Windows | 1.4 |
+| 1.5 ✅ | `duckling status`: receiver, devices (slot occupancy from the receiver's pairing register 0x2B5, not ping errors; #6, r1), own channel, host-name table. Live peers come with 2.8 | medium | 1 | CLI design | carbon + Windows | 1.4 |
 | 1.6 | `duckling switch <dev> <ch\|hostname>`, checks the ack | medium | 1 | – | ✋ carbon + Windows | 1.4 |
 | 1.7 | `duckling sniff` (replaces tools/hidpp-sniff.py, adds labels) | low | 1 | – | ✋ carbon | 1.2, 1.3 |
 | 1.8 | M1 acceptance: repeat C1, C5 and C6 using only `duckling`. Record the results in PLAN.md | medium | 1 (+1 Windows session) | `/run`, hardware test procedure | ✋ both | 1.5–1.7 |
@@ -58,7 +58,7 @@ General rules:
 | 2.5 | `core::Config` + `StateCache` (TOML, JSON state), `duckling gen-secret` | low | 1 | toml++ | – | 0.2 |
 | 2.6 | `core::EventQueue` + `Clock`, HID worker thread (sole owner of the `Receiver`; runs requests posted by the main thread), Net worker thread (HELLO every 2 s) | high | 1 | C++ concurrency, condition variables | – | 1.3, 2.4 |
 | 2.7 | `core::Router`, part 1: peers table, keyboard-switch → mouse follow, liveness check, loop guard. Tests with a fake clock | xhigh | 1 | state machines, PLAN decisions 7–8 | – | 2.6 |
-| 2.8 | `duckling run` wires everything together. Logging | medium | 1 | – | – | 2.7, 2.5 |
+| 2.8 | `duckling run` wires everything together. Logging. Live peers in `duckling status` (listen 3 s) | medium | 1 | – | – | 2.7, 2.5 |
 | 2.9 | Security pass on the net layer | high | 1 | `/security-review` | – | 2.8 |
 | 2.10 | M2 acceptance: press keyboard Easy-Switch on both computers, plus the dead-target test (C3) | medium | 1 (+1 Windows session) | `/run` | ✋ both | 2.8 |
 

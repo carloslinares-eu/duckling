@@ -189,7 +189,9 @@ public:
      * A request that times out is remembered for kLateReplyWindow. If its
      * reply arrives late, it is dropped, so it can't be taken for the reply
      * to a later request with the same header (hidpp::isReplyTo only
-     * compares headers).
+     * compares headers). HID++ 1.0 error replies to register reads are
+     * the exception: they don't name the sub-register, so they are never
+     * treated as late replies (issue #7).
      *
      * @param request Request to send. For HID++ 2.0 requests the software id
      *                must not be 0 (that is reserved for device events); use
