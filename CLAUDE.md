@@ -1,6 +1,6 @@
 # duckling: notes for Claude
 
-Read `PLAN.md` first. It holds the decisions, the hardware findings (C1–C6)
+Read `PLAN.md` first, then `DEVPLAN.md` for the task list. It holds the decisions, the hardware findings (C1–C6)
 and the code design. The architecture diagrams are in `docs/architecture/*.puml`
 (PlantUML). Keep them in sync when the design changes.
 
