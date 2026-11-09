@@ -218,6 +218,13 @@ Keep the sniffer running through all of these:
     settings still worked on the keyboard (confirmed by user). ✅
   - Side note: the reply to a CHANGE_HOST write arrives before the device
     drops. The daemon can treat a missing ack as "not switched".
+  - Review notes (carbon, 2026-11-09):
+    - The checks at 5 s, 30 s and 60 s on carbon failed: the ssh identity
+      path broke on the space in the Windows user folder. So "stayed on ch3"
+      rests on a single check at about 61 s. That's good enough for C5.
+    - After the command-triggered switch, the Windows log shows **no**
+      `09 00 <from> <to>` event before the drop. Only Easy-Switch button
+      presses produce it (C2). Duckling knows about its own commands anyway.
 
 ### C6. Are the channels numbered the same on both devices? (both)
 1. Press Easy-Switch 1, 2 and 3 on each device and note which computer each one
@@ -341,6 +348,9 @@ Keep the sniffer running through all of these:
      dead target and do nothing. So the LAN message is required for this direction on every
      host, not just Windows.
    - A keyboard power-off (no pre-drop event) does nothing.
+   - Loop guard: a disconnect caused by duckling's own CHANGE_HOST must not
+     start a new "follow" round. Remember the commands just sent, for a few
+     seconds per device, and ignore the resulting drop.
 
 ## Open questions
 (none; all answered)
