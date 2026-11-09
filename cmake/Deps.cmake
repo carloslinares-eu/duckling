@@ -8,7 +8,7 @@
 include(FetchContent)
 set(FETCHCONTENT_QUIET ON)
 
-# hidapi 0.14.0 and doctest 2.4.11 declare cmake_minimum_required() < 3.5,
+# hidapi 0.14.0 (and older doctest releases) declare cmake_minimum_required() < 3.5,
 # which CMake 4.x rejects outright (issue #1). Let them configure with 3.5
 # policies; CMake 3.x ignores this variable. Unset again at the end of file.
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
@@ -50,12 +50,12 @@ FetchContent_Declare(tomlplusplus
   SYSTEM)
 FetchContent_MakeAvailable(tomlplusplus)
 
-# --- doctest 2.4.11 (tests only) -------------------------------------------------
+# --- doctest 2.5.3 (tests only) -------------------------------------------------
 if(DUCKLING_BUILD_TESTS)
   set(DOCTEST_NO_INSTALL ON CACHE BOOL "" FORCE)
   FetchContent_Declare(doctest
     GIT_REPOSITORY https://github.com/doctest/doctest.git
-    GIT_TAG        v2.4.11
+    GIT_TAG        v2.5.3
     GIT_SHALLOW    TRUE
     SYSTEM)
   FetchContent_MakeAvailable(doctest)
