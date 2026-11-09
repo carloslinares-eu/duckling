@@ -24,3 +24,11 @@ and the code design. `DEVPLAN.md` has the task list. The architecture diagrams a
 - `tools/`: throwaway Python test helpers (not shipped).
 - `hw-logs/`: raw recordings from the hardware checks. They're also used as
   unit-test fixtures.
+
+## Faults and GitHub issues
+- When a fault turns up during a task and gets fixed, document it as a GitHub
+  issue: `gh issue create` on carloslinares-eu/duckling. Include the
+  symptom, the root cause and the fix. Close it from the fixing commit
+  (`Fixes #N`), or close it with a comment that links the commit.
+- Labels: `bug`, plus one of `build`, `hidpp`, `io`, `net`, `router`,
+  `packaging`.
