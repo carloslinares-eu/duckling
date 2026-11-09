@@ -50,6 +50,7 @@ add_library(duckling_lib STATIC
   src/hidpp/receiver_info.cpp
   src/hidpp/report.cpp
   src/io/receiver.cpp
+  src/net/hmac_sha256.cpp
 )
 target_include_directories(duckling_lib PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
