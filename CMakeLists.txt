@@ -40,6 +40,8 @@ configure_file(src/version.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/generated/ducklin
 # --- core library: everything except main(), so tests can link it -------------
 add_library(duckling_lib STATIC
   src/app/build_info.cpp
+  src/hidpp/hex.cpp
+  src/hidpp/report.cpp
 )
 target_include_directories(duckling_lib PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/src"

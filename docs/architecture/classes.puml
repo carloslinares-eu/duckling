@@ -103,15 +103,27 @@ package "io" {
 }
 
 package "hidpp" {
-  class Report {
-    +reportId : uint8_t
-    +deviceIndex : uint8_t
-    +featureIndex : uint8_t
-    +function : uint8_t
-    +swId : uint8_t
-    +params : array<uint8_t,16>
+  enum ReportId {
+    Short = 0x10 (7 B)
+    Long = 0x11 (20 B)
+  }
+  class Report <<value>> {
+    -bytes_ : array<uint8_t,20>
+    -length_ : size_t
+    +{static} make(id, deviceIndex, featureIndex, function, swId, params) : Report
+    +{static} decode(span) : optional<Report>
     +encode() : vector<uint8_t>
-    +decode(span) : optional<Report>
+    +bytes() : span<const uint8_t>
+    +id() : ReportId
+    +deviceIndex() / featureIndex() / functionByte() : uint8_t
+    +function() / swId() : uint8_t
+    +params() : span<const uint8_t>
+    +param(i) : uint8_t
+    +isError() : bool
+  }
+  class Hex <<utility>> {
+    +toHex(span) : string
+    +parseHex(string_view) : optional<vector<uint8_t>>
   }
   class Features <<utility>> {
     +ping(Receiver&, index) : optional<Version>
@@ -177,6 +189,7 @@ Router ..> Event
 Router ..> Device
 
 Receiver ..> Report
+Report --> ReportId
 Features ..> Receiver
 Features ..> Report
 EventParser ..> Report
