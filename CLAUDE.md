@@ -32,3 +32,12 @@ and the code design. `DEVPLAN.md` has the task list. The architecture diagrams a
   (`Fixes #N`), or close it with a comment that links the commit.
 - Labels: `bug`, plus one of `build`, `hidpp`, `io`, `net`, `router`,
   `packaging`.
+
+## Testing on Windows
+- carbon reaches the Windows PC over SSH with the `desktop-carlos` alias
+  (setup: `docs/dev-setup-windows-ssh.md`).
+- Run `tools/win-test.sh` (unit tests) or `tools/win-test.sh <args>` to copy
+  the MinGW build over and run `duckling.exe <args>` there.
+- The remote shell is Windows PowerShell 5.1. It wraps stderr output from
+  native programs in `NativeCommandError` blocks. That's cosmetic, not a
+  failure; check the exit code.
