@@ -203,7 +203,7 @@ Keep the sniffer running through all of these:
 2. Does it stay on ch3? Do Options+ settings still apply after it comes back to
    ch1?
 - Result (2026-11-09, log `hw-logs/c5-2026-11-09-1612.txt`): ✅ Options+ does
-  **not** undo the switch. ⚠️ Whether its settings reapply is not checked yet.
+  **not** undo the switch, and its settings still apply afterwards.
   - Sent `11 01 09 1A 02` (keyboard, CHANGE_HOST setCurrentHost ch3). The
     device acknowledged it (`11 01 09 1a 00`) after 0.66 s.
   - Straight away, `11 ff 83 b5 61 01 09 "MX MCHNCL"` appeared: a receiver
@@ -214,8 +214,8 @@ Keep the sniffer running through all of these:
   - It was brought back with `solaar config "MX Mechanical" change-host 1` on
     carbon. Windows then answered the ping, and getHostInfo read
     `03 00` (3 hosts, current = ch1).
-  - Still to check by hand: do Options+ key customizations and backlight
-    settings still work on the keyboard after it came back?
+  - After it came back, the Options+ key customizations and backlight
+    settings still worked on the keyboard (confirmed by user). ✅
   - Side note: the reply to a CHANGE_HOST write arrives before the device
     drops. The daemon can treat a missing ack as "not switched".
 
