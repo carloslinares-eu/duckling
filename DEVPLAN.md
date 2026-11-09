@@ -34,7 +34,7 @@ General rules:
 | 0.2 ✅ | CMake skeleton: `src/main.cpp` (prints version), FetchContent for hidapi 0.14 / toml++ / doctest, `tests/` target, static-link flags | medium | 1 | CMake, FetchContent, static linking | – | 0.1 |
 | 0.3 ✅ | MinGW-w64 toolchain file; cross-build the hello-world `.exe` and run it on Windows | medium | 1 | CMake toolchains, MinGW | Windows | 0.2 |
 | 0.4 ✅ | GitHub Actions: build and test on Linux and Windows, Doxygen warnings as a report, upload artifacts | medium | 1 | GitHub Actions, `gh` CLI | – | 0.2 |
-| 0.5 | README.md (what it does, build, install placeholder) and `.gitignore` | low | 1 | technical writing | – | 0.2 |
+| 0.5 ✅ | README.md (what it does, build, install placeholder) and `.gitignore` | low | 1 | technical writing | – | 0.2 |
 
 ## M1: CLI tool (`status`, `switch`, `sniff`), with no daemon yet
 | # | Task | Effort | Agents | Skills | HW | Depends |

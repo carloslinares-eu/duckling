@@ -2,9 +2,11 @@
 PROJECT_NAME           = duckling
 PROJECT_BRIEF          = "Logitech mouse + keyboard follow each other across hosts"
 OUTPUT_DIRECTORY       = build/docs
-INPUT                  = src
-FILE_PATTERNS          = *.hpp *.cpp
+INPUT                  = README.md PLAN.md DEVPLAN.md CLAUDE.md src
+FILE_PATTERNS          = *.hpp *.cpp *.md
 RECURSIVE              = YES
+EXCLUDE_PATTERNS       = */build/*
+USE_MDFILE_AS_MAINPAGE = README.md
 EXTRACT_ALL            = NO
 EXTRACT_PRIVATE        = YES
 EXTRACT_STATIC         = YES
