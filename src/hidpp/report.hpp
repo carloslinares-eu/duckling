@@ -38,12 +38,17 @@ inline constexpr std::uint8_t kReceiverIndex = 0xFF;
  * @brief Software id duckling puts in every request it sends.
  *
  * Replies echo the requester's swId, which tells duckling's replies apart
- * from Solaar's (2) and Options+'s. swId **0 is reserved for unsolicited
+ * from other software on the same interface. Solaar cycles its swId through
+ * 0x2..0xF (`logitech_receiver/base.py`, and all of 2..F appear in the C2/C3
+ * logs); Options+ uses 0xA and 0xB (C4, W1). 0x1 is the only free id.
+ * swId **0 is reserved for unsolicited
  * device events**: EventParser recognises a CHANGE_HOST switch announcement
  * by swId 0 (PLAN.md C2), so a request sent with swId 0 would have its reply
  * mistaken for a host switch.
  */
-inline constexpr std::uint8_t kDucklingSwId = 0x0D;
+inline constexpr std::uint8_t kDucklingSwId = 0x01;
+/** @brief Byte 2 value of a HID++ 1.0 "get long register" request and its reply. */
+inline constexpr std::uint8_t kGetLongRegisterSubId = 0x83;
 /** @brief Byte 2 value for a HID++ 1.0 error reply (from the receiver). */
 inline constexpr std::uint8_t kHidpp10ErrorSubId = 0x8F;
 /** @brief Byte 2 value for a HID++ 2.0 error reply (from a device). */
@@ -195,6 +200,48 @@ private:
     std::array<std::uint8_t, kLongLength> bytes_{};  ///< Frame, zero-padded.
     std::size_t length_ = kShortLength;              ///< Valid bytes in bytes_.
 };
+
+/**
+ * @brief Whether @p candidate answers @p request.
+ *
+ * A reply matches when:
+ * - **Normal reply:** device index, feature index and byte 3
+ *   (function | swId) are equal. The length may differ.
+ * - **HID++ 2.0 error** from the device: `11 i FF <feat> <fn|sw> <err> …`,
+ *   with feat and fn|sw equal to the request's.
+ * - **HID++ 1.0 error** from the receiver, e.g. when the device is offline:
+ *   `10 i 8F <feat> <fn|sw> <err> …`.
+ *
+ * - **HID++ 1.0 long register read** (`10 FF 83 <reg> <sub> …`): the
+ *   sub-register in param 0 must match as well. Options+ reads
+ *   `11 ff 83 b5 61 …` on the same interface (W1), which must not answer a
+ *   read of `b5 62`.
+ *
+ * Header-only matching can't tell a late reply to an earlier, timed-out
+ * request from the reply to a new one with the same header;
+ * io::Receiver handles that.
+ *
+ * Example from PLAN.md C4: request `11 01 00 1a 00 00 aa`, reply
+ * `11 01 00 1a 04 05 aa` (ping answered, protocol 4.5).
+ *
+ * @param request   The request that was sent.
+ * @param candidate A report read afterwards.
+ * @return True if @p candidate is the reply or an error for @p request.
+ */
+[[nodiscard]] bool isReplyTo(const Report& request, const Report& candidate) noexcept;
+
+/**
+ * @brief Whether a byte-2 value is a HID++ 1.0 register access sub-id.
+ *
+ * For sub-ids 0x80..0x83 (set/get short/long register), byte 3 is a register
+ * address, not function | swId, so swId rules don't apply.
+ *
+ * @param subId Byte 2 of a report.
+ * @return True for 0x80..0x83.
+ */
+[[nodiscard]] constexpr bool isRegisterAccess(std::uint8_t subId) noexcept {
+    return subId >= 0x80 && subId <= kGetLongRegisterSubId;
+}
 
 /**
  * @brief Expected frame length for a report ID byte.

@@ -136,8 +136,8 @@ Keep the sniffer running through all of these:
   - Mouse firmware: RBM22.00_B0003 is the latest available (checked
     2026-11-09). There's no update that might add CHANGE_HOST V2, so the
     mouse direction relies on ARRIVED.
-  - Still to verify: on Windows, the keyboard's first byte should read 00
-    (ch1) when it leaves Windows.
+  - Verified on Windows (task 1.3, `hw-logs/w1-…`): leaving Windows for
+    carbon sends `11 01 09 00 00 02`, i.e. from host 0 (ch1) to host 2 (ch3). ✅
 
 ### C3. What happens when the target host is off? (Linux)
 1. With the Windows PC off or asleep, run `solaar config "MX Mechanical"
@@ -399,11 +399,16 @@ run`) has three threads that talk through one event queue:
 ```
 - **Single owner:** only the main thread changes state. The HID and Net
   threads only parse input and post events.
-- **HID writes:** outgoing HID writes go through a mutex-protected
-  `Receiver::request()`. It matches the reply by device index, feature
-  index, function and software id, with a 1 s timeout.
-- **Software id:** duckling uses its own software id (0xD) to tell its own
-  replies apart from Solaar's and Options+'s on the same interface.
+- **HID requests:** only the HID thread touches the `Receiver`. Two threads
+  reading one handle would steal each other's reports (issue #5). The main
+  thread posts a request (e.g. "switch the mouse to host 2") to the HID
+  thread, which runs `Receiver::request()` between reads and posts the
+  result back as an event. `request()` matches the reply by device index,
+  feature index, function and software id, with a 2 s timeout. Late replies
+  to timed-out requests are dropped.
+- **Software id:** duckling uses software id 0x1 to tell its own replies
+  apart from other software on the same interface. Solaar cycles 0x2..0xF
+  (`logitech_receiver/base.py`, C2/C3 logs) and Options+ uses 0xA/0xB (C4, W1).
 
 ### Source layout
 ```
@@ -513,7 +518,7 @@ A fixed binary layout with no serializer library:
 | Peer expiry | 6 s | 3 missed HELLOs |
 | Pending follow window | 1.5 s | starting value. Button-to-online time on the target wasn't measured; tune in M3 |
 | Loop-guard suppress | 5 s | |
-| HID request timeout | 1 s | the first request after idle took 0.66 s on Windows (C4) |
+| HID request timeout | 2 s | the first request after idle took 0.66 s (C4) and 0.56–1.03 s (task 1.3 probes) on Windows |
 | Receiver re-scan | 5 s | hidapi 0.14 has no hotplug |
 
 ### Config (`/etc/duckling.toml`, `%ProgramData%\duckling\duckling.toml`)

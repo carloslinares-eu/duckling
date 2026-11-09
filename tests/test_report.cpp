@@ -136,6 +136,46 @@ TEST_CASE("decode ignores trailing bytes from fixed-size HID buffers") {
     CHECK(toHex(r->bytes()) == "10 02 41 10 02 34 b0");
 }
 
+TEST_CASE("isReplyTo matches replies and errors to their request") {
+    const std::uint8_t ping[] = {0x00, 0x00, 0xAA};
+    const Report req = Report::make(ReportId::Long, 1, 0x00, 1, 0xA, ping);
+    // C4: ping answered.
+    CHECK(isReplyTo(req, decodeHex("11 01 00 1a 04 05 aa 00 00 00 00 00 00 00 00 00 00 00 00 00")));
+    // Task 1.3 probe: device unreachable / empty slot -> HID++ 1.0 error from the receiver.
+    CHECK(isReplyTo(Report::make(ReportId::Long, 3, 0x00, 1, 0xD, ping), decodeHex("10 03 8f 00 1d 09 00")));
+    // HID++ 2.0 error from the device itself.
+    CHECK(isReplyTo(req, decodeHex("11 01 ff 00 1a 05 00 00 00 00 00 00 00 00 00 00 00 00 00 00")));
+    // Not replies: other device, other swId, other function, other feature, event.
+    CHECK_FALSE(isReplyTo(req, decodeHex("11 02 00 1a 04 05 aa 00 00 00 00 00 00 00 00 00 00 00 00 00")));
+    CHECK_FALSE(isReplyTo(req, decodeHex("11 01 00 1d 04 05 aa 00 00 00 00 00 00 00 00 00 00 00 00 00")));
+    CHECK_FALSE(isReplyTo(req, decodeHex("11 01 00 0a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00")));
+    CHECK_FALSE(isReplyTo(req, decodeHex("11 01 09 1a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00")));
+    CHECK_FALSE(isReplyTo(req, decodeHex("10 01 41 10 41 66 b3")));
+    // An error for a different request on the same device.
+    CHECK_FALSE(isReplyTo(req, decodeHex("10 01 8f 09 1d 04 00")));
+    CHECK_FALSE(isReplyTo(req, decodeHex("10 01 8f 00 1b 04 00")));
+}
+
+TEST_CASE("isReplyTo checks the sub-register of HID++ 1.0 long register reads") {
+    const std::uint8_t sub62[] = {0x62};
+    const Report req = Report::make(ReportId::Short, 0xFF, kGetLongRegisterSubId, 0xB, 0x5, sub62);
+    CHECK(toHex(req.bytes()) == "10 ff 83 b5 62 00 00");
+    CHECK(isReplyTo(req, decodeHex("11 ff 83 b5 62 02 0a 4d 58 20 4d 61 73 74 65 72 00 00 00 00")));
+    // W1: Options+ reading slot 1's name on the same interface.
+    CHECK_FALSE(isReplyTo(req, decodeHex("11 ff 83 b5 61 01 09 4d 58 20 4d 43 48 4e 43 4c 00 00 00 00")));
+    CHECK(isReplyTo(req, decodeHex("10 ff 8f 83 b5 03 00")));
+}
+
+TEST_CASE("isRegisterAccess and duckling's software id") {
+    CHECK(isRegisterAccess(0x80));
+    CHECK(isRegisterAccess(0x83));
+    CHECK_FALSE(isRegisterAccess(0x41));
+    CHECK_FALSE(isRegisterAccess(0x8F));
+    CHECK_FALSE(isRegisterAccess(0x00));
+    // Solaar uses 0x2..0xF and Options+ 0xA/0xB (C2, C3, W1); 0 is for events.
+    CHECK(kDucklingSwId == 0x1);
+}
+
 TEST_CASE("frameLength and equality") {
     CHECK(frameLength(0x10) == kShortLength);
     CHECK(frameLength(0x11) == kLongLength);

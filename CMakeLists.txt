@@ -43,6 +43,7 @@ add_library(duckling_lib STATIC
   src/hidpp/events.cpp
   src/hidpp/hex.cpp
   src/hidpp/report.cpp
+  src/io/receiver.cpp
 )
 target_include_directories(duckling_lib PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/src"

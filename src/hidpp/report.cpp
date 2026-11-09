@@ -100,6 +100,20 @@ bool Report::isError() const noexcept {
     return bytes_[2] == kHidpp10ErrorSubId || bytes_[2] == kHidpp20ErrorFeature;
 }
 
+bool isReplyTo(const Report& request, const Report& candidate) noexcept {
+    if (candidate.deviceIndex() != request.deviceIndex()) return false;
+    if (candidate.featureIndex() == kHidpp20ErrorFeature ||
+        candidate.featureIndex() == kHidpp10ErrorSubId) {
+        return candidate.functionByte() == request.featureIndex() &&
+               candidate.param(0) == request.functionByte();
+    }
+    if (candidate.featureIndex() != request.featureIndex() ||
+        candidate.functionByte() != request.functionByte()) {
+        return false;
+    }
+    return request.featureIndex() != kGetLongRegisterSubId || candidate.param(0) == request.param(0);
+}
+
 /**
  * @brief Byte-wise equality of two frames.
  * @param a First report.

@@ -41,7 +41,7 @@ General rules:
 |---|---|---|---|---|---|---|
 | 1.1 ✅ | `hidpp::Report`: encode and decode short/long reports. Unit tests use lines from `hw-logs/` | medium | 1 | HID++ 2.0 framing, doctest | – | 0.2 |
 | 1.2 ✅ | `hidpp::EventParser`: 0x41 connect notices and the CHANGE_HOST event. Tests use every C2/C3/C5 log line | high | 1 | HID++ notifications, Bolt receiver | – | 1.1 |
-| 1.3 | `io::Receiver`: enumerate 046D:C548 0xFF00/0x0002, open, read with timeout, `request()` with swId 0xD matching, write mutex | high | 2 *(Linux and Windows backends checked in parallel)* | hidapi, hidraw, Windows HID, threading | carbon + Windows | 1.1 |
+| 1.3 ✅ | `io::Receiver`: enumerate 046D:C548 0xFF00/0x0001+0x0002, open (two handles on Windows), read with timeout, `request()` with swId 0x1 matching, late-reply dropping. Review fixes: #5. Thread safety: HID thread owns it (2.6) | high | 2 *(Linux and Windows backends checked in parallel)* | hidapi, hidraw, Windows HID, threading | carbon + Windows | 1.1 |
 | 1.4 | `hidpp::Features`: ping, getFeatureIndex, getHostInfo, setCurrentHost, HOSTS_INFO names, device name | high | 1 | HID++ features 0x0000/0x0005/0x1814/0x1815 | carbon | 1.3 |
 | 1.5 | `duckling status`: receiver, devices, own channel, host-name table | medium | 1 | CLI design | carbon + Windows | 1.4 |
 | 1.6 | `duckling switch <dev> <ch\|hostname>`, checks the ack | medium | 1 | – | ✋ carbon + Windows | 1.4 |
@@ -56,7 +56,7 @@ General rules:
 | 2.3 | `net::ReplayGuard` (timestamp window, seq per host) | medium | 1 | – | – | 2.2 |
 | 2.4 | `net::UdpSocket`: BSD and Winsock, broadcast, recv timeout | medium | 2 *(Linux and Windows in parallel)* | sockets, Winsock | LAN | 0.3 |
 | 2.5 | `core::Config` + `StateCache` (TOML, JSON state), `duckling gen-secret` | low | 1 | toml++ | – | 0.2 |
-| 2.6 | `core::EventQueue` + `Clock`, HID worker thread, Net worker thread (HELLO every 2 s) | high | 1 | C++ concurrency, condition variables | – | 1.3, 2.4 |
+| 2.6 | `core::EventQueue` + `Clock`, HID worker thread (sole owner of the `Receiver`; runs requests posted by the main thread), Net worker thread (HELLO every 2 s) | high | 1 | C++ concurrency, condition variables | – | 1.3, 2.4 |
 | 2.7 | `core::Router`, part 1: peers table, keyboard-switch → mouse follow, liveness check, loop guard. Tests with a fake clock | xhigh | 1 | state machines, PLAN decisions 7–8 | – | 2.6 |
 | 2.8 | `duckling run` wires everything together. Logging | medium | 1 | – | – | 2.7, 2.5 |
 | 2.9 | Security pass on the net layer | high | 1 | `/security-review` | – | 2.8 |

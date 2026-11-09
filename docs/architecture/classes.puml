@@ -76,13 +76,40 @@ package "core" {
 }
 
 package "io" {
+  class ReceiverPaths {
+    shortPath : string
+    longPath : string
+    serial : string
+    productId : uint16_t
+    +sharedHandle() : bool
+  }
   class Receiver {
-    +open() : bool
+    +{static} open(ReceiverPaths) : optional<Receiver>
+    +{static} openFirst() : optional<Receiver>
     +isOpen() : bool
+    +close()
+    +paths() : const ReceiverPaths&
     +read(timeout) : optional<Report>
-    +request(Report, timeout) : optional<Report>
-    -dev_ : hid_device*
-    -writeMutex_ : mutex
+    +write(Report) : bool
+    +request(Report, timeout = 2 s) : optional<Report>
+    -short_ : hid_device*
+    -long_ : hid_device*
+    -pending_ : deque<Report>
+    -timedOut_ : vector<TimedOut>
+    -readErrors_ : int
+  }
+  note right of Receiver
+    Linux: one hidraw node (short_ == long_).
+    Windows: two collections, read in turn (long first);
+    0x41 notices only arrive on the short one.
+    Late replies to timed-out requests are dropped.
+    Closes after 3 read errors in a row.
+    Not thread-safe: in the daemon (2.6) only the
+    HID thread uses it, requests are posted to it.
+  end note
+  class ReceiverFn <<utility>> {
+    +findReceivers() : vector<ReceiverPaths>
+    +collectionKey(path) : string
   }
   class Device {
     index : uint8_t
@@ -141,7 +168,8 @@ package "hidpp" {
   note right of EventParser
     Registration is dropped when the slot reports
     another wpid or an unpair notice (0x40).
-    swId 0 = device event; requests use kDucklingSwId (0xD).
+    swId 0 = device event; requests use kDucklingSwId (0x1;
+    Solaar cycles 0x2..0xF, Options+ uses 0xA/0xB).
   end note
   class "hidpp::Event" as HidppEvent <<variant>> {
     DeviceConnection | HostChange
@@ -219,6 +247,8 @@ Router ..> Event
 Router ..> Device
 
 Receiver ..> Report
+Receiver --> ReceiverPaths
+ReceiverFn ..> ReceiverPaths
 Report --> ReportId
 Features ..> Receiver
 Features ..> Report

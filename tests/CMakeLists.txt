@@ -7,6 +7,7 @@ add_executable(duckling_tests
   test_build_info.cpp
   test_events.cpp
   test_hex.cpp
+  test_receiver.cpp
   test_report.cpp
   fixtures.cpp
   test_fixtures.cpp
@@ -21,3 +22,9 @@ duckling_set_warnings(duckling_tests)
 target_compile_definitions(duckling_tests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
 
 add_test(NAME duckling_tests COMMAND duckling_tests)
+
+# Manual hardware probe for the receiver I/O (task 1.3). Needs a real Bolt
+# receiver, so it is built but not registered with ctest.
+add_executable(duckling_hwprobe hw_probe.cpp)
+target_link_libraries(duckling_hwprobe PRIVATE duckling_lib)
+duckling_set_warnings(duckling_hwprobe)

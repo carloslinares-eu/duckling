@@ -129,6 +129,19 @@ TEST_CASE("C5 (Windows): replies and button events are not HostChange") {
     CHECK(eventsOf(configuredParser(), "c5-").empty());
 }
 
+TEST_CASE("W1 (Windows, duckling_hwprobe, Options+ running): kbd ch1 -> ch3 and back") {
+    // First recording made through io::Receiver on Windows (task 1.3). The
+    // switch announcement comes on the long collection, the 0x41 notices on
+    // the short one. Options+ re-reads CHANGE_HOST/HOSTS_INFO afterwards
+    // with its own swIds (0xA, 0xB), and none of that may become an event.
+    const std::vector<Event> expected = {
+        HostChange{kKbd, 0, 2},  // leaving host 0 (Windows, ch1) for host 2 (carbon, ch3)
+        conn(kKbd, false),
+        conn(kKbd, true),
+    };
+    CHECK(eventsOf(configuredParser(), "w1-") == expected);
+}
+
 TEST_CASE("HostChange needs CHANGE_HOST to be registered for the device") {
     const auto events = eventsOf(EventParser{}, "c2-");
     for (const auto& e : events) CHECK(std::holds_alternative<DeviceConnection>(e));
@@ -166,6 +179,7 @@ TEST_CASE("HostChange count per recording") {
     CHECK(count("c3-") == 3);
     CHECK(count("c4-") == 0);
     CHECK(count("c5-") == 0);
+    CHECK(count("w1-") == 1);
 }
 
 TEST_CASE("parseDeviceConnection decodes every field") {
