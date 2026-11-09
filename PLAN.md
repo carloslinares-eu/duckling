@@ -45,13 +45,14 @@ Write each result in the "Result:" line. The whole set takes about 20 minutes.
   ```
   for d in /sys/class/hidraw/hidraw*; do python3 -c "import sys;b=open(sys.argv[1]+'/device/report_descriptor','rb').read();print(sys.argv[1].split('/')[-1],'HID++' if b'\x06\x00\xff' in b else '-')" $d; done
   ```
-- Recorder: `tools/hidpp-sniff.py`. It prints every HID++ report with a
-  timestamp, tags online/OFFLINE notices, and lets you type a label + Enter to
-  insert a marker. Save each run under `hw-logs/` so it can be read straight
-  from the repo:
+- Recorder: the C2/C3 logs were taken with `tools/hidpp-sniff.py` (now
+  removed; it's in git history). Since task 1.7 it's `duckling sniff`. It
+  prints every HID++ report with a timestamp and a label, and lets you type
+  a label + Enter to insert a marker. Save each run under `hw-logs/` so it
+  can be read straight from the repo (and used as a test fixture):
   ```
   cd ~/Workspace/duckling
-  sudo python3 tools/hidpp-sniff.py | tee hw-logs/c2-$(date +%F-%H%M).txt
+  ./build/linux-release/duckling sniff | tee hw-logs/c2-$(date +%F-%H%M).txt
   ```
   `tee` shows the output live and writes the file as your user, not root.
   HID++ basics for reading the output:
@@ -450,7 +451,7 @@ duckling/
   packaging/
     linux/  duckling.service, 70-duckling.rules (udev), duckling.sysusers
     windows/ install.ps1 (scheduled task + firewall rule)
-  tools/            hidpp-sniff.py, hidpp-win.py (test helpers, not shipped)
+  tools/            hidpp-win.py, win-test.sh (test helpers, not shipped)
 ```
 
 ### HID++ details used (all observed in hw-logs)
@@ -570,7 +571,24 @@ State cache: `/var/lib/duckling/state.json` and
   - Each switch got its ack and then the OFFLINE notice, as in C5.
   - Switching to carbon by name isn't possible yet: carbon's channel still
     reads "Logitech Bolt receiver" (decision 8).
-- `duckling sniff`: the C++ version of tools/hidpp-sniff.py.
+- `duckling sniff [seconds]`: the C++ version of tools/hidpp-sniff.py, with
+  labels: connection notices, Easy-Switch announcements (it asks each
+  connected device for its CHANGE_HOST index), receiver and device errors
+  with their meaning, Bolt pairing/codename replies, and whose reply a frame
+  is by software id. Labels contain no hex byte pairs, so a capture is a
+  valid fixture (`fixtureSafe`). Checked on carbon during a mouse round
+  trip (`hw-logs/s1-…`), and with the user pressing Easy-Switch while it
+  recorded on both computers at once (`hw-logs/s2-…` carbon, `s3-…`
+  Windows, task 1.7):
+  - Windows: `11 01 09 00 00 02 … <- keyboard switching ch1 -> ch3`, then
+    keyboard OFFLINE 37 ms later.
+  - carbon: `11 01 09 00 02 00 … <- keyboard switching ch3 -> ch1`, then
+    OFFLINE 38 ms later.
+  - The mouse produced only online/OFFLINE notices (as in C2).
+  - sniff learns a newly connected device's CHANGE_HOST index 3 s after its
+    online notice (after the connect burst). Its requests use duckling's
+    software id, so they could collide with a `duckling switch` or daemon
+    asking the same device at the same moment (issue #9).
 - `duckling gen-secret`.
 
 ### Build and packaging

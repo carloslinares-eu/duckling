@@ -172,6 +172,15 @@ public:
     [[nodiscard]] std::optional<hidpp::Report> read(std::chrono::milliseconds timeout);
 
     /**
+     * @brief Whether request() set reports aside that read() hasn't returned yet.
+     *
+     * Those reports arrived while request() was waiting, so their read time
+     * isn't their arrival time (`duckling sniff` says so; issue #9).
+     * @return True if read() would return a set-aside report next.
+     */
+    [[nodiscard]] bool hasPending() const noexcept { return !pending_.empty(); }
+
+    /**
      * @brief Send one report.
      * @param report Report to send. Short reports go to the short collection
      *               and long ones to the long collection.

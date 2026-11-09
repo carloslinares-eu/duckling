@@ -5,7 +5,9 @@
 #include <doctest/doctest.h>
 
 #include <stdexcept>
+#include <string_view>
 
+#include "hidpp/hex.hpp"
 #include "hidpp/receiver_info.hpp"
 #include "scripted_requester.hpp"
 
@@ -39,6 +41,24 @@ TEST_CASE("getPairingInfo: link up, empty slot, wrong sub-register") {
     CHECK_THROWS_AS((void)getPairingInfo(rq, 0), std::invalid_argument);
     CHECK_THROWS_AS((void)getPairingInfo(rq, 7), std::invalid_argument);
     CHECK(rq.done());
+}
+
+TEST_CASE("parsePairingInfo and parseCodename decode anyone's replies") {
+    const auto bytes = [](std::string_view hex) {
+        return *Report::decode(*parseHex(hex));
+    };
+    const auto p = parsePairingInfo(bytes("11 ff 83 b5 52 42 34 b0 e5 76 cd 4a 01 00 02 0a 01 00 00 00"));
+    REQUIRE(p.has_value());
+    CHECK(*p == PairingInfo{2, false, 0x02, 0xB034, 0xE576CD4A});
+    const auto c = parseCodename(bytes("11 ff 83 b5 61 01 09 4d 58 20 4d 43 48 4e 43 4c 00 00 00 00"));
+    REQUIRE(c.has_value());
+    CHECK(*c == Codename{1, "MX MCHNCL"});
+    // Not these: other sub-registers, slot 0 or 7, short errors, device reports.
+    CHECK_FALSE(parsePairingInfo(bytes("11 ff 83 b5 61 01 09 4d 58 20 4d 43 48 4e 43 4c 00 00 00 00")));
+    CHECK_FALSE(parsePairingInfo(bytes("11 ff 83 b5 50 42 34 b0 e5 76 cd 4a 01 00 02 0a 01 00 00 00")));
+    CHECK_FALSE(parsePairingInfo(bytes("11 ff 83 b5 57 42 34 b0 e5 76 cd 4a 01 00 02 0a 01 00 00 00")));
+    CHECK_FALSE(parseCodename(bytes("10 ff 8f 83 b5 08 00")));
+    CHECK_FALSE(parseCodename(bytes("11 02 83 b5 61 01 09 4d 58 20 4d 43 48 4e 43 4c 00 00 00 00")));
 }
 
 TEST_CASE("getCodename (r1, W1)") {

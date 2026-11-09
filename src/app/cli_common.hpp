@@ -32,6 +32,17 @@ namespace duckling::app {
 [[nodiscard]] std::string printable(const std::string& s);
 
 /**
+ * @brief printf into a std::string, with compiler format checking.
+ * @param fmt printf format.
+ * @param ... Arguments.
+ * @return The formatted text (truncated at 511 characters).
+ */
+#if defined(__GNUC__)
+__attribute__((format(printf, 1, 2)))
+#endif
+[[nodiscard]] std::string formatText(const char* fmt, ...);
+
+/**
  * @brief Open the first Bolt receiver that opens, or explain on stderr why none did.
  *
  * Tells "no receiver" apart from "found but can't open" and, for the

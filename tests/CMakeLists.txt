@@ -11,6 +11,7 @@ add_executable(duckling_tests
   test_receiver.cpp
   test_receiver_info.cpp
   test_report.cpp
+  test_sniff.cpp
   test_status.cpp
   test_switch.cpp
   fixtures.cpp

@@ -22,6 +22,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 
 #include "hidpp/events.hpp"
@@ -54,6 +55,37 @@ struct PairingInfo {
     /** @brief Equality, for tests. */
     friend bool operator==(const PairingInfo&, const PairingInfo&) = default;
 };
+
+/** @brief A slot's codename, from a register 0x2B5 reply. */
+struct Codename {
+    std::uint8_t slot = 0;  ///< Device slot, 1..6.
+    std::string name;       ///< E.g. "MX MCHNCL" (r1).
+    /** @brief Equality, for tests. */
+    friend bool operator==(const Codename&, const Codename&) = default;
+};
+
+/**
+ * @brief Decode a pairing-info reply seen on the wire (anyone's).
+ *
+ * `11 ff 83 b5 5N <status> <wpid lo> <wpid hi> <serial x4> …` (r1).
+ *
+ * @param reply A report.
+ * @return The info, or std::nullopt if it isn't a pairing-info reply for slot 1..6.
+ * @see hw-logs/r1-2026-11-09-bolt-pairing-registers.txt
+ */
+[[nodiscard]] std::optional<PairingInfo> parsePairingInfo(const Report& reply) noexcept;
+
+/**
+ * @brief Decode a codename reply seen on the wire (anyone's).
+ *
+ * `11 ff 83 b5 6N 01 <len> <name…>`, at most 13 name bytes (r1, W1).
+ *
+ * @param reply A report.
+ * @return Slot and name (trailing NULs removed), or std::nullopt if it
+ *         isn't a codename reply for slot 1..6.
+ * @see hw-logs/r1-2026-11-09-bolt-pairing-registers.txt
+ */
+[[nodiscard]] std::optional<Codename> parseCodename(const Report& reply);
 
 /**
  * @brief Read a slot's pairing info.

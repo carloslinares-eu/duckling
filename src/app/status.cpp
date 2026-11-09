@@ -4,7 +4,6 @@
  */
 #include "app/status.hpp"
 
-#include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <utility>
@@ -23,24 +22,6 @@
 namespace duckling::app {
 
 namespace {
-
-/**
- * @brief printf into a std::string.
- * @param out Where to append.
- * @param fmt Format string.
- * @param ... Arguments.
- */
-#if defined(__GNUC__)
-__attribute__((format(printf, 2, 3)))
-#endif
-void appendf(std::string& out, const char* fmt, ...) {
-    char buf[256];
-    va_list args;
-    va_start(args, fmt);
-    std::vsnprintf(buf, sizeof buf, fmt, args);
-    va_end(args);
-    out += buf;
-}
 
 /**
  * @brief Read everything about a device that answered the ping.
@@ -116,24 +97,24 @@ StatusReport collectStatus(hidpp::Requester& rq, std::string receiver, std::stri
 
 std::string formatStatus(const StatusReport& report) {
     std::string out;
-    appendf(out, "receiver   Logi Bolt  %s\n", report.receiver.c_str());
-    appendf(out, "this host  %s\n", report.thisHost.empty() ? "(unknown)" : report.thisHost.c_str());
+    out += formatText("receiver   Logi Bolt  %s\n", report.receiver.c_str());
+    out += formatText("this host  %s\n", report.thisHost.empty() ? "(unknown)" : report.thisHost.c_str());
 
     if (report.devices.empty()) out += "\nno paired devices\n";
     for (const auto& d : report.devices) {
         const std::string name = printable(d.name.empty() ? d.codename : d.name);
-        appendf(out, "\nslot %u  %-8s  %s  (wpid %04X, serial %08X)\n", d.pairing.slot,
+        out += formatText("\nslot %u  %-8s  %s  (wpid %04X, serial %08X)\n", d.pairing.slot,
                 kindName(d.pairing.kind()), name.empty() ? "?" : name.c_str(), d.pairing.wpid,
                 static_cast<unsigned>(d.pairing.serial));
 
         if (!d.pairing.linkUp) {
             out += "        not connected here (on another host, or off)\n";
         } else if (!d.here()) {
-            appendf(out, "        not answering: %s\n", hidpp::describe(*d.pingFailure).c_str());
+            out += formatText("        not answering: %s\n", hidpp::describe(*d.pingFailure).c_str());
         } else {
-            appendf(out, "        connected here, HID++ %u.%u", d.version->major, d.version->minor);
+            out += formatText("        connected here, HID++ %u.%u", d.version->major, d.version->minor);
             if (d.host) {
-                appendf(out, ", this host is ch%u of %u", d.host->current + 1, d.host->count);
+                out += formatText(", this host is ch%u of %u", d.host->current + 1, d.host->count);
             }
             out += "\n";
         }
@@ -141,12 +122,12 @@ std::string formatStatus(const StatusReport& report) {
         for (const auto& h : d.hostNames) {
             const char* label = !h.paired ? "(not paired)" : !h.nameRead ? "(name not readable)" : "";
             const bool current = d.host && d.host->current == h.host;
-            appendf(out, "        ch%u  %s%s%s\n", h.host + 1, printable(h.name).c_str(), label,
+            out += formatText("        ch%u  %s%s%s\n", h.host + 1, printable(h.name).c_str(), label,
                     current ? "   <- this host" : "");
         }
-        for (const auto& p : d.problems) appendf(out, "        ! %s\n", p.c_str());
+        for (const auto& p : d.problems) out += formatText("        ! %s\n", p.c_str());
     }
-    for (const auto& p : report.problems) appendf(out, "\n! %s\n", p.c_str());
+    for (const auto& p : report.problems) out += formatText("\n! %s\n", p.c_str());
     return out;
 }
 

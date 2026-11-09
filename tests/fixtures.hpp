@@ -51,7 +51,7 @@ struct FrameScan {
  * @brief Extract every HID++ frame from one recording.
  *
  * Works with both recorder formats:
- * - `hidpp-sniff.py`: `7956.509 11 01 09 00 …  <- note`
+ * - `hidpp-sniff.py` / `duckling sniff`: `7956.509 11 01 09 00 …  <- note`
  * - `hidpp-win.py`: `16:11:40.478 >> 11 01 00 1a …`
  *
  * Every token on every line is examined. A two-digit hex token `10` or `11`

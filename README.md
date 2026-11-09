@@ -102,6 +102,9 @@ duckling status      show the receiver, paired devices, this host's channel
 duckling switch <mouse|keyboard|all> <channel|hostname>
                      send devices connected here to channel 1-3, or to the
                      channel named after a host (case-insensitive)
+duckling sniff [seconds]
+                     print every HID++ report from the receiver, labelled;
+                     type a label + Enter to insert a marker
 duckling version     print version and build information
 duckling help        show usage
 ```
@@ -135,7 +138,16 @@ mouse: ch3 (Logitech Bolt receiver) -> ch1 (DESKTOP-CARLOS)
 `switch` doesn't check that the target computer is on. A device sent to a
 computer that is off stays offline until you press its Easy-Switch button.
 
-Planned: `duckling run` (the daemon), `sniff` and `gen-secret`.
+Recording traffic for a bug report or a hardware check (the output is a
+valid test fixture):
+```
+$ duckling sniff | tee hw-logs/my-check.txt
+6.510 10 02 41 10 02 34 b0  <- mouse online (slot 2, wpid B034)
+15.410 11 02 0a 11 00 00 00 …  <- mouse reply, swId 0x1 (duckling)
+15.428 10 02 41 10 42 34 b0  <- mouse OFFLINE (slot 2, wpid B034)
+```
+
+Planned: `duckling run` (the daemon) and `gen-secret`.
 
 ## Repository layout
 

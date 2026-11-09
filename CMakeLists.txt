@@ -41,6 +41,7 @@ configure_file(src/version.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/generated/ducklin
 add_library(duckling_lib STATIC
   src/app/build_info.cpp
   src/app/cli_common.cpp
+  src/app/sniff.cpp
   src/app/status.cpp
   src/app/switch_host.cpp
   src/hidpp/events.cpp

@@ -4,6 +4,7 @@
  */
 #include "app/cli_common.hpp"
 
+#include <cstdarg>
 #include <cstdio>
 
 namespace duckling::app {
@@ -26,6 +27,15 @@ std::string printable(const std::string& s) {
         if (u < 0x20 || u > 0x7E) c = '?';
     }
     return out;
+}
+
+std::string formatText(const char* fmt, ...) {
+    char buf[512];
+    va_list args;
+    va_start(args, fmt);
+    std::vsnprintf(buf, sizeof buf, fmt, args);
+    va_end(args);
+    return buf;
 }
 
 std::optional<io::Receiver> openReceiverOrExplain() {
