@@ -340,7 +340,11 @@ package "net" {
     +start(EventQueue&)
     -helloEvery : 2 s
   }
-  class HmacSha256 <<vendored>>
+  class HmacSha256 <<vendored>> {
+    +Sha256::hash(bytes) : Sha256Digest
+    +hmacSha256(key, message) : Sha256Digest
+    +constantTimeEqual(a, b) : bool
+  }
 }
 
 Main --> Daemon
