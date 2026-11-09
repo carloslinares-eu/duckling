@@ -7,7 +7,7 @@ Linux box has a Logi Bolt receiver (046d:c548), exposed as /dev/hidraw0-2.
 Press Easy-Switch on either device and the other device follows to the same
 computer, on both Linux and Windows. Like Logi Flow, without the edge crossing.
 
-## How it works (Option A, no network)
+## How it works (Option A; see decisions 7–8 for the refined rules)
 1. The daemon finds the receiver and lists the paired devices (mouse, keyboard).
 2. For each device, it looks up the HID++ CHANGE_HOST feature (0x1814) and reads
    the current channel.
@@ -351,6 +351,222 @@ Keep the sniffer running through all of these:
    - Loop guard: a disconnect caused by duckling's own CHANGE_HOST must not
      start a new "follow" round. Remember the commands just sent, for a few
      seconds per device, and ignore the resulting drop.
+
+8. Channel setup: **autodetected, no channel config.** A config file holds
+   only the shared secret and optional overrides.
+   - **Own channel:** CHANGE_HOST getHostInfo (function 0) returns
+     `[nbHost, currHost]` for any device online here. For example, Windows
+     read `03 00` in C5. It's read per device, because the mouse and keyboard
+     could in principle be paired to different slots.
+   - **Other hosts' channels:** HOSTS_INFO (0x1815) on each device lists a
+     host name per channel (C6: `1 DESKTOP-CARLOS, 2 fedora, 3 carbon`).
+     Duckling turns a peer's hostname into "channel on this device" from
+     that table.
+   - **Missing names:** the keyboard's ch2 shows "Logitech Bolt receiver". If
+     a slot has no real name, the peer's HELLO/ARRIVED carries its channel
+     per device as a fallback. Later, duckling can write its own hostname
+     into its slot (0x1815 setHostFriendlyName). Verify that write before
+     enabling it.
+   - **Cache:** the last-known own channels and the name table are saved to a
+     small state file. That way a daemon that starts while the devices are
+     on another host still knows its channels.
+   - The secret is the only thing that must be configured. `duckling
+     gen-secret` prints one, and you paste it into each host's config. It
+     can't be autodetected, because that's what keeps strangers on the LAN
+     out.
+
+## Code design
+
+### Process model
+A single executable, `duckling`, with subcommands. The daemon (`duckling
+run`) has three threads that talk through one event queue:
+
+```
+ HID thread ──┐   (hid_read_timeout loop, 100 ms; re-scan for the receiver every 5 s)
+              ├──▶ EventQueue ──▶ main thread: Router (state machine) + timers
+ Net thread ──┘   (UDP recv loop; HELLO sender every 2 s)
+```
+- **Single owner:** only the main thread changes state. The HID and Net
+  threads only parse input and post events.
+- **HID writes:** outgoing HID writes go through a mutex-protected
+  `Receiver::request()`. It matches the reply by device index, feature
+  index, function and software id, with a 1 s timeout.
+- **Software id:** duckling uses its own software id (0xD) to tell its own
+  replies apart from Solaar's and Options+'s on the same interface.
+
+### Source layout
+```
+duckling/
+  CMakeLists.txt
+  cmake/            toolchain-mingw64.cmake, deps.cmake (FetchContent)
+  src/
+    main.cpp        CLI: run | status | switch | sniff | gen-secret | version
+    hidpp/
+      report.hpp/.cpp     encode/decode short (0x10, 7 B) and long (0x11, 20 B) reports
+      features.hpp/.cpp   ROOT getFeature, CHANGE_HOST (get/set + event), HOSTS_INFO, DEVICE_NAME
+      events.hpp/.cpp     parse receiver 0x41 connect notices and CHANGE_HOST events into typed events
+    io/
+      receiver.hpp/.cpp   hidapi wrapper: find 046D:C548 usagePage 0xFF00 usage 0x0002, open, read, request()
+      device.hpp          Device {index, wpid, kind, name, ch_feat, ch_ver, online, own_channel, host_names[3]}
+    net/
+      socket.hpp/.cpp     UDP broadcast socket (BSD/Winsock behind one interface)
+      message.hpp/.cpp    HELLO/ARRIVED wire format, HMAC sign/verify, replay window
+      hmac_sha256.hpp/.cpp  vendored, single file
+    core/
+      router.hpp/.cpp     routing rules (decision 7), peers table, pending follows, loop guard
+      clock.hpp           injectable clock for tests
+      config.hpp/.cpp     TOML config + state cache
+      log.hpp             stderr logger (journald picks it up; Windows: file in %ProgramData%)
+    platform/
+      hostname.cpp, paths.cpp, service_win.cpp (later)
+  tests/            doctest; fixtures from hw-logs/*.txt
+  packaging/
+    linux/  duckling.service, 70-duckling.rules (udev), duckling.sysusers
+    windows/ install.ps1 (scheduled task + firewall rule)
+  tools/            hidpp-sniff.py, hidpp-win.py (test helpers, not shipped)
+```
+
+### HID++ details used (all observed in hw-logs)
+| What | Request → reply / event |
+|---|---|
+| Ping | `11 i 00 1D 00 00 AA` → `11 i 00 1D 04 05 AA` (protocol 4.5) |
+| Find feature | `11 i 00 0D <hi> <lo>` → `… <index> <type> <version>` |
+| getHostInfo | `11 i F 0D` → `… <nbHost> <currHost>` (0-based) |
+| setCurrentHost | `11 i F 1D <host>` → ack `11 i F 1D 00` (arrives before the drop) |
+| Switch event (kbd, V2) | `11 i F 00 <from> <to>` about 37 ms before the drop; button presses only |
+| Receiver connect notice | `10 i 41 10 <st> <wpid lo> <wpid hi>`; bit 6 of `st` = offline |
+
+(`D` = duckling's software id in the low nibble; `F` = the CHANGE_HOST index
+found at startup.)
+
+### Router: state and rules
+State:
+- `devices`: per index, `{online, own_ch, host_names[], last_seen}`.
+- `peers`: hostname → `{last_hello, channels: wpid → ch, addr}`.
+- `pending`: at most one per leaving device, `{device, deadline}`.
+- `suppress`: wpid → expiry. This is the loop guard: drops we caused
+  ourselves.
+
+Events and actions:
+```
+on KbdSwitchEvent(from,to):                     # button press, target known
+    target_host = name_of(kbd, to)
+    if peer_alive(target_host): set_host(mouse, ch_of(mouse, target_host)); suppress(mouse)
+    else log("target off, not following")      # C3: never strand both
+
+on DeviceOffline(dev):
+    if suppressed(dev): return
+    if dev is kbd and a KbdSwitchEvent just arrived: return   # already handled above
+    pending[dev] = now + 1.5 s                  # mouse, or kbd with no event
+
+on Arrived(peer, wpid, ch) from LAN:
+    if pending has the device with this wpid:
+        follower = the other device
+        if follower.online here: set_host(follower, ch_of(follower, peer)); suppress(follower)
+        clear pending
+
+on DeviceOnline(dev):
+    broadcast ARRIVED(self, dev.wpid, dev.own_ch); refresh own_ch cache
+    clear pending[dev]                          # came back (power cycle), nothing to do
+
+on timer: drop expired pending (power-off or sleep) and expired peers
+```
+- `ch_of(device, host)`: look the host up in the device's HOSTS_INFO table,
+  else use the channel the peer announced, else give up and log.
+- Every `set_host` checks the ack. If there's no ack, log it and don't
+  suppress.
+
+### Wire format (UDP, port 47474, IPv4 broadcast)
+A fixed binary layout with no serializer library:
+```
+ 0  4  magic "DUCK"
+ 4  1  version = 1
+ 5  1  type    1 = HELLO, 2 = ARRIVED
+ 6  2  payload length
+ 8  8  timestamp, unix ms
+16  4  sequence number (per sender)
+20  1  hostname length n, then n bytes (UTF-8, ≤ 63)
+..  1  device count k, then k × {wpid u16, channel u8}   # HELLO: own channel per device; ARRIVED: the arriving device first
+..  16 HMAC-SHA256 over all of the above, truncated to 16 bytes
+```
+- Rejected if: the HMAC is wrong, the timestamp is off by more than 5 s
+  (hosts must keep time with NTP, which is fine on all three), or the
+  (host, seq) pair was already seen.
+- ARRIVED is sent 3 times, 100 ms apart, because UDP can drop packets.
+  Receivers de-duplicate by seq.
+
+### Timing constants
+| Name | Value | Why |
+|---|---|---|
+| HELLO interval | 2 s | |
+| Peer expiry | 6 s | 3 missed HELLOs |
+| Pending follow window | 1.5 s | starting value. Button-to-online time on the target wasn't measured; tune in M3 |
+| Loop-guard suppress | 5 s | |
+| HID request timeout | 1 s | the first request after idle took 0.66 s on Windows (C4) |
+| Receiver re-scan | 5 s | hidapi 0.14 has no hotplug |
+
+### Config (`/etc/duckling.toml`, `%ProgramData%\duckling\duckling.toml`)
+```toml
+secret = "base64…"          # required, same on all hosts
+# optional overrides
+port = 47474
+# hostname = "carbon"       # default: OS hostname; must match the HOSTS_INFO name
+# [channels]                # only if autodetect is wrong
+# "MX Master 3S" = { fedora = 2 }
+```
+State cache: `/var/lib/duckling/state.json` and
+`%ProgramData%\duckling\state.json`.
+
+### CLI
+- `duckling run`: the daemon.
+- `duckling status`: receiver, devices, own channels, host-name table, live
+  peers. Peers are read by listening for 3 s.
+- `duckling switch <mouse|keyboard|all> <channel|hostname>`: manual switch.
+  It replaces solaar/hidpp-win.py for day-to-day use.
+- `duckling sniff`: the C++ version of tools/hidpp-sniff.py.
+- `duckling gen-secret`.
+
+### Build and packaging
+- CMake ≥ 3.24, C++20.
+- FetchContent: hidapi 0.14.0 (static), toml++ 3.x (header-only) and
+  doctest (tests only). HMAC-SHA256 is vendored.
+- Linux: link with `-static-libstdc++ -static-libgcc`. It depends only on
+  glibc and libudev (pulled in by the hidapi hidraw backend).
+- Windows: MinGW-w64 cross-build from Linux (`-static`), or MSVC `/MT`.
+  Either way it's a single .exe.
+- GitHub Actions: a Linux and Windows matrix that runs the unit tests and
+  uploads the binaries as release artifacts.
+- **Linux service:** a system service, so it works at the login screen too.
+  - It runs as user `duckling`, created by sysusers.d.
+  - The udev rule `KERNEL=="hidraw*", ATTRS{idVendor}=="046d",
+    ATTRS{idProduct}=="c548", GROUP="duckling", MODE="0660"` lets it open
+    the receiver.
+  - `Restart=always`.
+- **Windows:** `install.ps1` copies the .exe to `%ProgramFiles%\duckling`,
+  registers a scheduled task "At startup" running as SYSTEM, and adds a
+  firewall rule for UDP 47474 on private networks only. A real Windows
+  service (`service_win.cpp`) can come later.
+
+### Testing
+- **Unit:** report encode/decode and event parsing, using the actual lines in
+  `hw-logs/` as fixtures.
+- **Router:** scripted event sequences with a fake clock. Covers kbd switch,
+  mouse switch, power-off, dead target (C3), and our own drop (loop guard).
+- **Wire:** a round trip, a bad HMAC, a stale timestamp, a replayed seq.
+- **Manual end-to-end:** the C1–C5 procedures, repeated with `duckling` in
+  place of solaar.
+
+### Milestones
+1. **M1, CLI only:** `status`, `switch`, `sniff` on Linux and Windows. This
+   proves the protocol and I/O layers. No daemon yet.
+2. **M2, daemon with networking:** HELLO, peers, and keyboard → mouse
+   following (the exact-target direction, with liveness check).
+3. **M3, mouse → keyboard:** ARRIVED, the pending window, and the loop
+   guard.
+4. **M4, packaging:** systemd + udev + sysusers, Windows install script, CI
+   releases.
+5. **M5, polish:** writing the hostname into HOSTS_INFO, a real Windows
+   service, maybe a tray icon.
 
 ## Open questions
 (none; all answered)
