@@ -1,0 +1,35 @@
+0.000 # duckling sniff on \\?\HID#VID_046D&PID_C548&MI_02&Col01#7&85d146e&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+0.941 # keyboard in slot 1: CHANGE_HOST at index 0x09 (asked by duckling)
+1.857 # mouse in slot 2: CHANGE_HOST at index 0x0a (asked by duckling)
+1.915 # recording; type a label + Enter to insert a marker, Ctrl+C to stop
+4.030 11 ff 83 b5 51 01 66 b3 28 4c 45 9c 01 00 01 14 01 00 00 00  <- pairing info of slot 1: keyboard, link up
+4.968 11 01 00 11 04 05 a5 00 00 00 00 00 00 00 00 00 00 00 00 00  <- keyboard reply, swId 0x1 (duckling)
+4.998 11 01 00 01 09 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00  <- keyboard reply, swId 0x1 (duckling)
+5.029 11 01 00 01 0a 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00  <- keyboard reply, swId 0x1 (duckling)
+5.066 11 01 00 01 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  <- keyboard reply, swId 0x1 (duckling)
+5.088 11 01 09 01 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  <- keyboard reply, swId 0x1 (duckling)
+5.103 11 01 0a 01 13 08 03 00 00 00 00 00 00 00 00 00 00 00 00 00  <- keyboard reply, swId 0x1 (duckling)
+5.126 11 01 0a 11 00 01 05 01 0e 18 00 00 00 00 00 00 00 00 00 00  <- keyboard reply, swId 0x1 (duckling)
+5.141 11 01 0a 31 00 00 44 45 53 4b 54 4f 50 2d 43 41 52 4c 4f 53  <- keyboard reply, swId 0x1 (duckling)
+5.164 11 01 0a 11 01 01 05 01 16 18 00 00 00 00 00 00 00 00 00 00  <- keyboard reply, swId 0x1 (duckling)
+5.178 11 01 0a 31 01 00 4c 6f 67 69 74 65 63 68 20 42 6f 6c 74 20  <- keyboard reply, swId 0x1 (duckling)
+5.193 11 01 0a 31 01 0e 72 65 63 65 69 76 65 72 00 00 00 00 00 00  <- keyboard reply, swId 0x1 (duckling)
+5.209 11 01 0a 11 02 01 05 01 16 18 00 00 00 00 00 00 00 00 00 00  <- keyboard reply, swId 0x1 (duckling)
+5.224 11 01 0a 31 02 00 4c 6f 67 69 74 65 63 68 20 42 6f 6c 74 20  <- keyboard reply, swId 0x1 (duckling)
+5.239 11 01 0a 31 02 0e 72 65 63 65 69 76 65 72 00 00 00 00 00 00  <- keyboard reply, swId 0x1 (duckling)
+5.254 11 01 09 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  <- keyboard reply, swId 0x1 (duckling)
+5.283 10 01 41 10 41 66 b3  <- keyboard OFFLINE (slot 1, wpid B366)
+5.305 11 ff 83 b5 52 02 34 b0 e5 76 cd 4a 01 00 02 0a 01 00 00 00  <- pairing info of slot 2: mouse, link up
+5.305 11 ff 83 b5 61 01 09 4d 58 20 4d 43 48 4e 43 4c 00 00 00 00  <- codename of slot 1: 'MX MCHNCL'
+5.320 10 ff 8f 83 b5 08 00  <- receiver error for request 0x83/0xb5: unknown device (HID++ 1.0 error 0x08)
+5.335 10 ff 8f 83 b5 08 00  <- receiver error for request 0x83/0xb5: unknown device (HID++ 1.0 error 0x08)
+5.351 10 ff 8f 83 b5 08 00  <- receiver error for request 0x83/0xb5: unknown device (HID++ 1.0 error 0x08)
+5.366 10 ff 8f 83 b5 08 00  <- receiver error for request 0x83/0xb5: unknown device (HID++ 1.0 error 0x08)
+5.382 10 ff 8f 83 b5 08 00  <- receiver error for request 0x83/0xb5: unknown device (HID++ 1.0 error 0x08)
+5.397 10 ff 8f 83 b5 08 00  <- receiver error for request 0x83/0xb5: unknown device (HID++ 1.0 error 0x08)
+5.412 10 ff 8f 83 b5 08 00  <- receiver error for request 0x83/0xb5: unknown device (HID++ 1.0 error 0x08)
+5.427 10 ff 8f 83 b5 08 00  <- receiver error for request 0x83/0xb5: unknown device (HID++ 1.0 error 0x08)
+5.600 11 02 09 20 00 50 01 00 00 00 00 00 00 00 00 00 00 00 00 00  <- mouse notification
+5.697 11 02 09 20 00 50 00 00 00 00 00 00 00 00 00 00 00 00 00 00  <- mouse notification
+6.382 11 02 09 20 00 50 01 00 00 00 00 00 00 00 00 00 00 00 00 00  <- mouse notification
+6.537 11 02 09 20 00 50 00 00 00 00 00 00 00 00 00 00 00 00 00 00  <- mouse notification

@@ -46,7 +46,7 @@ General rules:
 | 1.5 ✅ | `duckling status`: receiver, devices (slot occupancy from the receiver's pairing register 0x2B5, not ping errors; #6, r1), own channel, host-name table. Live peers come with 2.8 | medium | 1 | CLI design | carbon + Windows | 1.4 |
 | 1.6 ✅ | `duckling switch <mouse\|keyboard\|all> <ch\|hostname>`: checks the ack and the OFFLINE notice; hostname matched in HOSTS_INFO. Round trips Windows ⇄ carbon verified | medium | 1 | – | ✋ carbon + Windows | 1.4 |
 | 1.7 ✅ | `duckling sniff [seconds]` (replaces tools/hidpp-sniff.py, adds labels). Captures `hw-logs/s1-…` (switch round trip), `s2-…`/`s3-…` (Easy-Switch presses on carbon and Windows). Review fixes: #9 | low | 1 | – | ✋ carbon | 1.2, 1.3 |
-| 1.8 | M1 acceptance: repeat C1, C5 and C6 using only `duckling`. Record the results in PLAN.md | medium | 1 (+1 Windows session) | `/run`, hardware test procedure | ✋ both | 1.5–1.7 |
+| 1.8 ✅ | M1 acceptance: repeat C1, C5 and C6 using only `duckling`. Record the results in PLAN.md. All passed; captures `hw-logs/m1-…` | medium | 1 (+1 Windows session) | `/run`, hardware test procedure | ✋ both | 1.5–1.7 |
 
 ## M2: Daemon, networking, and keyboard → mouse following
 | # | Task | Effort | Agents | Skills | HW | Depends |

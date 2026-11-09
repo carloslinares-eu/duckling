@@ -90,6 +90,21 @@ Write each result in the "Result:" line. The whole set takes about 20 minutes.
     1–3") but are **not divertable**, so we can't intercept the key press.
     We can only see the disconnect it causes, which is what Option A expects
     anyway.
+- M1 re-run with `duckling` only (task 1.8, 2026-11-09): ✅ both devices.
+  - carbon `switch keyboard desktop-carlos`: ack, then OFFLINE 25 ms later,
+    and Windows `status` shows it on ch1 (`hw-logs/m1-c1-…-2017-carbon.txt`).
+  - Mouse: Windows `switch mouse 3`, then carbon `switch mouse
+    desktop-carlos`, each confirmed by `status` on the other computer
+    (`hw-logs/m1-c1-…-mouse-carbon.txt`).
+  - Windows `switch all carbon` (by name) took 2.41 s, and carbon
+    `switch all 1` took 0.58 s. Switching **to carbon by name** only worked
+    while ch3 read "carbon". A few minutes later it read "Logitech Bolt
+    receiver" again, and `switch keyboard carbon` was refused (correctly),
+    so see decision 8.
+  - Side note: Solaar runs hidden on carbon (autostart). It re-reads the
+    devices on every connect and polls the mouse's pairing register about
+    once a second while the mouse is away. This doesn't get in duckling's
+    way.
 
 ### C2. What does the receiver report when a device leaves? (Linux)
 Keep the sniffer running through all of these:
@@ -226,6 +241,14 @@ Keep the sniffer running through all of these:
     - After the command-triggered switch, the Windows log shows **no**
       `09 00 <from> <to>` event before the drop. Only Easy-Switch button
       presses produce it (C2). Duckling knows about its own commands anyway.
+- M1 re-run with `duckling` only (task 1.8, 2026-11-09,
+  `hw-logs/m1-c5-…-windows.txt`): ✅ with Options+ running.
+  - Windows `duckling switch keyboard 3`: ack, then OFFLINE 29 ms later.
+  - Options+/LogiBolt reacted only with pairing-info reads, plus 8
+    "unknown device" errors for empty slots.
+  - carbon `status` showed the keyboard on ch3 at 5 s, 30 s and 60 s.
+  - After several duckling round trips, the Options+ key customizations and
+    backlight still worked (confirmed by user). ✅
 
 ### C6. Are the channels numbered the same on both devices? (both)
 1. Press Easy-Switch 1, 2 and 3 on each device and note which computer each one
@@ -246,6 +269,16 @@ Keep the sniffer running through all of these:
     - So **"carbon" is gone from the mouse's ch3**, and the keyboard's ch1
       now says DESKTOP-CARLOS (Options+ wrote it in W1). Names aren't
       stable; see decision 8.
+- M1 re-run with `duckling` only (task 1.8, 2026-11-09,
+  `hw-logs/m1-c6-…-carbon.txt` / `…-windows.txt`): ✅
+  - `duckling status` on both computers shows ch1 DESKTOP-CARLOS and ch2
+    fedora (mouse) on both devices. ch3 reads "carbon" or "Logitech Bolt
+    receiver" depending on when it's read (decision 8).
+  - With both computers recording, the user pressed Easy-Switch 3 and then 1
+    on each device. ch3 reached carbon and ch1 reached Windows. Both
+    computers logged the keyboard's announcements (`ch1 -> ch3` on Windows,
+    `ch3 -> ch1` on carbon). The mouse produced only online/OFFLINE
+    notices, as in C2.
 
 ## How it would be delivered
 - Language: C++20, built with CMake. One small executable per OS, same code
@@ -379,6 +412,13 @@ Keep the sniffer running through all of these:
      host's name, and only when they read the table. Later, duckling can write its own hostname
      into its slot (0x1815 setHostFriendlyName). Verify that write before
      enabling it.
+   - Task 1.8 saw ch3 flip within minutes on both devices. Windows read
+     "Logitech Bolt receiver", then "carbon" (after the devices had sat on
+     carbon for a minute or more), then "Logitech Bolt receiver" again. A
+     20 s capture on carbon after a connect showed **no** HOSTS_INFO write
+     from Solaar, so who writes "carbon" is still unknown. Switching by
+     hostname is therefore a convenience only. The daemon must use the
+     HELLO/ARRIVED channel fallback.
    - **Cache:** the last-known own channels and the name table are saved to a
      small state file. That way a daemon that starts while the devices are
      on another host still knows its channels.
