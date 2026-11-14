@@ -549,18 +549,27 @@ on timer: drop expired pending (power-off or sleep) and expired peers
   suppress.
 
 ### Wire format (UDP, port 47474, IPv4 broadcast)
-A fixed binary layout with no serializer library:
+A fixed binary layout with no serializer library. All integers are
+big-endian (task 2.2, `src/net/message.hpp`):
 ```
  0  4  magic "DUCK"
  4  1  version = 1
  5  1  type    1 = HELLO, 2 = ARRIVED
- 6  2  payload length
+ 6  2  payload length = bytes from offset 8 up to the MAC
  8  8  timestamp, unix ms
 16  4  sequence number (per sender)
-20  1  hostname length n, then n bytes (UTF-8, ≤ 63)
-..  1  device count k, then k × {wpid u16, channel u8}   # HELLO: own channel per device; ARRIVED: the arriving device first
+20  1  hostname length n (1..63), then n bytes (UTF-8, no control characters)
+..  1  device count k (0..6; ARRIVED ≥ 1), then k × {wpid u16, channel u8 (1..3)}   # HELLO: own channel per device; ARRIVED: the arriving device first
 ..  16 HMAC-SHA256 over all of the above, truncated to 16 bytes
 ```
+- A datagram is 39 to 119 bytes. Channels are 1-based, as in the CLI, and
+  a wpid may appear only once.
+- Parsing checks size, magic, version and the length field first. Next
+  it checks the MAC, in constant time, before trusting any field. Then
+  every field is checked anyway, because a peer that has the secret can
+  still be buggy.
+- Each message has exactly one encoding. Anything `parse` accepts,
+  `serialize` turns back into the same bytes. The fuzz tests check this.
 - Rejected if: the HMAC is wrong, the timestamp is off by more than 5 s
   (hosts must keep time with NTP, which is fine on all three), or the
   (host, seq) pair was already seen.

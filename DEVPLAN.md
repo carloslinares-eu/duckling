@@ -52,7 +52,7 @@ General rules:
 | # | Task | Effort | Agents | Skills | HW | Depends |
 |---|---|---|---|---|---|---|
 | 2.1 ✅ | Vendored HMAC-SHA256, checked against the RFC 4231 test vectors (all 7) and the FIPS 180 SHA-256 examples; `constantTimeEqual` for 2.2 | medium | 1 | cryptography basics | – | 0.2 |
-| 2.2 | `net::Message` wire format: serialize/parse, HMAC, length checks. Fuzz-style tests on malformed input | high | 1 | binary protocols, defensive parsing | – | 2.1 |
+| 2.2 ✅ | `net::Message` wire format: serialize/parse, HMAC, length checks. Fuzz-style tests on malformed input (golden frames from an independent Python encoder; 300k random frames; clean under ASan/UBSan) | high | 1 | binary protocols, defensive parsing | – | 2.1 |
 | 2.3 | `net::ReplayGuard` (timestamp window, seq per host) | medium | 1 | – | – | 2.2 |
 | 2.4 | `net::UdpSocket`: BSD and Winsock, broadcast, recv timeout | medium | 2 *(Linux and Windows in parallel)* | sockets, Winsock | LAN | 0.3 |
 | 2.5 | `core::Config` + `StateCache` (TOML, JSON state), `duckling gen-secret` | low | 1 | toml++ | – | 0.2 |

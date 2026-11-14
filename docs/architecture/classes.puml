@@ -326,12 +326,13 @@ package "net" {
   }
   class Message {
     type : HELLO | ARRIVED
-    timestamp : uint64_t
+    timestampMs : uint64_t
     seq : uint32_t
     hostname : string
-    devices : vector<pair<uint16_t,uint8_t>>
-    +serialize(secret) : vector<uint8_t>
-    +parse(bytes, secret) : optional<Message>
+    devices : vector<DeviceChannel{wpid, channel}>
+    +serialize(Message, secret) : vector<uint8_t>
+    +parse(bytes, secret) : variant<Message, ParseError>
+    +validate(Message) : optional<ParseError>
   }
   class ReplayGuard {
     +accept(host, seq, timestamp) : bool
