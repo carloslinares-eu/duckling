@@ -335,7 +335,9 @@ package "net" {
     +validate(Message) : optional<ParseError>
   }
   class ReplayGuard {
-    +accept(host, seq, timestamp) : bool
+    +check(hostname, seq, timestampMs, nowMs) : ReplayVerdict
+    +check(Message, nowMs) : ReplayVerdict
+    -hosts : map<string, entries{seq, timestampMs}>
   }
   class NetWorker <<thread>> {
     +start(EventQueue&)

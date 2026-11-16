@@ -52,6 +52,7 @@ add_library(duckling_lib STATIC
   src/io/receiver.cpp
   src/net/hmac_sha256.cpp
   src/net/message.cpp
+  src/net/replay_guard.cpp
 )
 target_include_directories(duckling_lib PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
