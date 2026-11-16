@@ -10,6 +10,7 @@ add_executable(duckling_tests
   test_hex.cpp
   test_hmac_sha256.cpp
   test_message.cpp
+  test_replay_guard.cpp
   test_receiver.cpp
   test_receiver_info.cpp
   test_report.cpp

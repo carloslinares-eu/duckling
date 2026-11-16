@@ -53,7 +53,7 @@ General rules:
 |---|---|---|---|---|---|---|
 | 2.1 ✅ | Vendored HMAC-SHA256, checked against the RFC 4231 test vectors (all 7) and the FIPS 180 SHA-256 examples; `constantTimeEqual` for 2.2 | medium | 1 | cryptography basics | – | 0.2 |
 | 2.2 ✅ | `net::Message` wire format: serialize/parse, HMAC, length checks. Fuzz-style tests on malformed input (golden frames from an independent Python encoder; 300k random frames; clean under ASan/UBSan) | high | 1 | binary protocols, defensive parsing | – | 2.1 |
-| 2.3 | `net::ReplayGuard` (timestamp window, seq per host) | medium | 1 | – | – | 2.2 |
+| 2.3 ✅ | `net::ReplayGuard` (timestamp window ±5 s, duplicate = same host + seq + timestamp, bounded memory). ARRIVED retransmits must be byte-identical | medium | 1 | – | – | 2.2 |
 | 2.4 | `net::UdpSocket`: BSD and Winsock, broadcast, recv timeout | medium | 2 *(Linux and Windows in parallel)* | sockets, Winsock | LAN | 0.3 |
 | 2.5 | `core::Config` + `StateCache` (TOML, JSON state), `duckling gen-secret` | low | 1 | toml++ | – | 0.2 |
 | 2.6 | `core::EventQueue` + `Clock`, HID worker thread (sole owner of the `Receiver`; runs requests posted by the main thread), Net worker thread (HELLO every 2 s) | high | 1 | C++ concurrency, condition variables | – | 1.3, 2.4 |
@@ -65,7 +65,7 @@ General rules:
 ## M3: Mouse → keyboard following (ARRIVED)
 | # | Task | Effort | Agents | Skills | HW | Depends |
 |---|---|---|---|---|---|---|
-| 3.1 | ARRIVED send on DeviceOnline (×3, 100 ms apart), de-duplication | medium | 1 | – | – | 2.8 |
+| 3.1 | ARRIVED send on DeviceOnline (×3, 100 ms apart, **byte-identical copies**: serialize once so ReplayGuard de-duplicates them) | medium | 1 | – | – | 2.8 |
 | 3.2 | `Router`, part 2: pending window, ARRIVED → keyboard follow, power-off timeout, power-cycle clear. Tests | xhigh | 1 | state machines | – | 3.1 |
 | 3.3 | Measure the button-to-online time and tune the 1.5 s window and the other timing constants | medium | 1 | log analysis | ✋ both | 3.2 |
 | 3.4 | M3 acceptance: full matrix (each device × each direction × power-off × target off) | high | 1 (+1 Windows session) | `/run`, test matrix | ✋ both | 3.3 |

@@ -478,7 +478,8 @@ duckling/
       device.hpp          Device {index, wpid, kind, name, ch_feat, ch_ver, online, own_channel, host_names[3]}
     net/
       socket.hpp/.cpp     UDP broadcast socket (BSD/Winsock behind one interface)
-      message.hpp/.cpp    HELLO/ARRIVED wire format, HMAC sign/verify, replay window
+      message.hpp/.cpp    HELLO/ARRIVED wire format, HMAC sign/verify
+      replay_guard.hpp/.cpp  timestamp window, duplicate (replay/retransmit) check
       hmac_sha256.hpp/.cpp  vendored, single file
     core/
       router.hpp/.cpp     routing rules (decision 7), peers table, pending follows, loop guard
@@ -571,10 +572,14 @@ big-endian (task 2.2, `src/net/message.hpp`):
 - Each message has exactly one encoding. Anything `parse` accepts,
   `serialize` turns back into the same bytes. The fuzz tests check this.
 - Rejected if: the HMAC is wrong, the timestamp is off by more than 5 s
-  (hosts must keep time with NTP, which is fine on all three), or the
-  (host, seq) pair was already seen.
+  (hosts must keep time with NTP, which is fine on all three), or the same
+  (host, seq, timestamp) was already accepted (`net::ReplayGuard`, task
+  2.3). Keying on the timestamp too means a peer that restarts and reuses
+  seq numbers isn't mistaken for a replay.
 - ARRIVED is sent 3 times, 100 ms apart, because UDP can drop packets.
-  Receivers de-duplicate by seq.
+  The retransmits **must be byte-identical copies** (same seq and same
+  timestamp: serialize once, send the same buffer 3 times), so the
+  receiver's ReplayGuard drops copies 2 and 3 as duplicates.
 
 ### Timing constants
 | Name | Value | Why |
